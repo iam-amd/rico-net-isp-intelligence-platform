@@ -11,8 +11,9 @@ python-multipart>=0.0.6
 slowapi>=0.1.8
 alembic>=1.13.0
 
-# OCR for sticker scanning
-easyocr>=1.7.0
+# OCR image utilities. EasyOCR is intentionally omitted from the public demo
+# image to keep free-tier backend builds small; install easyocr locally if you
+# want to exercise sticker OCR endpoints.
 Pillow>=10.0.0
 
 # Testing
