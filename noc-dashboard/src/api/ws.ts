@@ -21,8 +21,9 @@ export class WSConnection {
     const token = localStorage.getItem('noc_token');
     if (!token || !this.shouldReconnect) return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const url = `${protocol}://${window.location.host}${this.path}`;
+    const apiBase = import.meta.env.VITE_API_URL || window.location.origin;
+    const wsBase = apiBase.replace(/^http/, 'ws').replace(/\/$/, '');
+    const url = `${wsBase}${this.path}`;
 
     try {
       this.ws = new WebSocket(url, ['rico-jwt', token]);
