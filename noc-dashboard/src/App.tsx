@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
-import OutageBanner from './components/shared/OutageBanner';
 import NotificationToasts from './components/shared/NotificationToasts';
 import FocusRibbon from './components/shared/FocusRibbon';
 import LoginPage from './pages/LoginPage';
@@ -57,8 +56,6 @@ function AppShell({ onLogout }: { onLogout: () => void }) {
         tvMode={tvMode}
         onToggleTvMode={toggleTvMode}
       />
-      {!tvMode && <OutageBanner />}
-      {tvMode && <OutageBanner />}
       <FocusRibbon />
       <NotificationToasts notifications={notifications} onDismiss={dismiss} onDismissAll={dismissAll} />
       <div className="flex flex-1 overflow-hidden">
