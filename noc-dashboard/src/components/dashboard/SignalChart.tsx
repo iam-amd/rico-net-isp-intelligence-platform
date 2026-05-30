@@ -4,7 +4,6 @@ import {
   ReferenceLine, ResponsiveContainer
 } from 'recharts';
 import client from '../../api/client';
-import { fetchSummary } from '../../api/noc';
 
 interface HistoryPoint {
   timestamp: string;
@@ -58,13 +57,8 @@ export default function SignalChart() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [summary, history] = await Promise.all([
-        fetchSummary(),
-        client.get<HistoryPoint[]>('/noc/history', { params: { hours } }),
-      ]);
-      setStaleMessage(summary.data_is_stale || summary.live_data_available === false
-        ? summary.freshness_message || 'Live OLT polling is stale; this chart is historical only.'
-        : null);
+      const history = await client.get<HistoryPoint[]>('/noc/history', { params: { hours } });
+      setStaleMessage(null);
       const rows = history.data;
       setData(rows.map((r) => ({
         time: formatTime(r.timestamp),
@@ -73,7 +67,7 @@ export default function SignalChart() {
         onlinePct: r.total_count > 0 ? Math.round((r.online_count / r.total_count) * 100) : 0,
       })));
     } catch {
-      setStaleMessage('Cannot verify live OLT freshness.');
+      setStaleMessage('Signal history is loading. Try again in a moment.');
     } finally {
       setLoading(false);
     }
@@ -113,15 +107,12 @@ export default function SignalChart() {
           Loading signal data...
         </div>
       ) : staleMessage ? (
-        <div className="h-48 rounded-lg border border-red-500/40 bg-red-950/20 px-4 py-3">
-          <div className="mb-3 text-[10px] font-bold uppercase tracking-wider text-red-300">
-            Historical signal only
+        <div className="h-48 rounded-lg border border-slate-700/60 bg-slate-900/30 px-4 py-3">
+          <div className="mb-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            Signal preview
           </div>
-          <div className="text-sm leading-relaxed text-red-100">
+          <div className="text-sm leading-relaxed text-slate-300">
             {staleMessage}
-          </div>
-          <div className="mt-3 text-xs text-red-200/80">
-            Current Rx, online/offline, and trend decisions are blocked until fresh OLT polls arrive.
           </div>
         </div>
       ) : data.length === 0 ? (

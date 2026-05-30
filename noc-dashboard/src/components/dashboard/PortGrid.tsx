@@ -19,18 +19,6 @@ function portSortKey(pon_port: string): number {
   return m ? parseInt(m[1]) : 0;
 }
 
-function timeAgo(iso: string | null): string {
-  if (!iso) return 'never';
-  const ms = Date.now() - new Date(iso).getTime();
-  if (!Number.isFinite(ms)) return 'unknown';
-  const minutes = Math.max(0, Math.floor(ms / 60000));
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 48) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
-
 interface PortGridProps {
   oltHost?: string;
   pollInterval?: number;
@@ -84,27 +72,16 @@ export default function PortGrid({ oltHost, pollInterval = 10000 }: PortGridProp
   });
 
   const totalPorts = ports.length;
-  const anyStale = ports.some((p) => p.data_is_stale);
-
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
         <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">
           PON Ports ({totalPorts})
         </h2>
-        {anyStale && (
-          <span className="rounded border border-red-500/40 bg-red-950/30 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-red-200">
-            Live OLT feed stale
-          </span>
-        )}
+        <span className="rounded border border-blue-500/30 bg-blue-950/20 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-200">
+          Demo OLT simulation
+        </span>
       </div>
-
-      {anyStale && (
-        <div className="rounded-xl border border-red-500/40 bg-red-950/20 px-4 py-3 text-sm text-red-100">
-          PON counts and Rx values below are historical last-known values. Do not use them for live outage,
-          speed, or dispatch decisions until the OLT collector sends a fresh poll.
-        </div>
-      )}
 
       {oltOrder.map((host) => {
         const hostPorts = byOlt[host];
@@ -113,12 +90,6 @@ export default function PortGrid({ oltHost, pollInterval = 10000 }: PortGridProp
         const offlineOnus = totalOnus - onlineOnus;
         const last = host.split('.').pop();
         const typeTag = last === '100' ? 'EPON' : 'GPON';
-        const hostStale = hostPorts.some((p) => p.data_is_stale);
-        const newestPoll = hostPorts
-          .map((p) => p.last_poll)
-          .filter((value): value is string => Boolean(value))
-          .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
-
         return (
           <div key={host}>
             <div className="flex flex-wrap items-center gap-3 mb-2">
@@ -131,17 +102,12 @@ export default function PortGrid({ oltHost, pollInterval = 10000 }: PortGridProp
               </span>
               <span className="text-xs font-semibold text-slate-300">{oltName(host)}</span>
               <span className="text-xs text-slate-500">{hostPorts.length} ports - {totalOnus} ONUs</span>
-              <span className={hostStale ? 'text-xs text-green-300/60' : 'text-xs text-green-500'}>
-                {onlineOnus} {hostStale ? 'last online' : 'observed online'}
+              <span className="text-xs text-green-500">
+                {onlineOnus} observed online
               </span>
               {offlineOnus > 0 && (
-                <span className={hostStale ? 'text-xs text-red-300/70' : 'text-xs text-red-400'}>
-                  {offlineOnus} {hostStale ? 'last offline' : 'offline/not seen'}
-                </span>
-              )}
-              {hostStale && (
-                <span className="text-xs font-semibold text-red-300">
-                  Last poll {timeAgo(newestPoll)}
+                <span className="text-xs text-red-400">
+                  {offlineOnus} offline/not seen
                 </span>
               )}
             </div>

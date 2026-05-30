@@ -16,7 +16,7 @@ interface HeaderProps {
   onToggleTvMode?: () => void;
 }
 
-export default function Header({ onLogout, wsConnected = false, liveDataAvailable = false, dataIsStale = true, audioEnabled = true, onToggleAudio, notificationCount = 0, tvMode = false, onToggleTvMode }: HeaderProps) {
+export default function Header({ onLogout, wsConnected = false, audioEnabled = true, onToggleAudio, notificationCount = 0, tvMode = false, onToggleTvMode }: HeaderProps) {
   const navigate = useNavigate();
   const [clock, setClock] = useState(new Date());
   const [query, setQuery] = useState('');
@@ -172,14 +172,10 @@ export default function Header({ onLogout, wsConnected = false, liveDataAvailabl
       {/* WS connection indicator */}
       <div className="flex items-center gap-2 mr-6">
         <span className={`w-2 h-2 rounded-full ${
-          liveDataAvailable && !dataIsStale
-            ? 'bg-green-400 pulse-dot'
-            : wsConnected
-              ? 'bg-red-400'
-              : 'bg-yellow-400'
+          wsConnected ? 'bg-green-400 pulse-dot' : 'bg-yellow-400'
         }`} />
         <span className="text-xs text-slate-400">
-          {liveDataAvailable && !dataIsStale ? 'OLT Live' : (wsConnected ? 'OLT Stale' : 'Polling')}
+          {wsConnected ? 'Demo Live' : 'Connecting'}
         </span>
       </div>
 
