@@ -4,6 +4,29 @@ Rico Net is a full-stack ISP operations platform built as a practical project fo
 
 This public repository is a sanitized showcase copy. It contains demo-safe code, fake sample data, and deployment notes. Real customer data, credentials, OLT dumps, private photos, and local runtime files are intentionally excluded.
 
+## Live Public Demo
+
+| Surface | Link |
+| --- | --- |
+| Admin dashboard | <https://rico-net-admin.vercel.app> |
+| NOC dashboard | <https://rico-net-noc.vercel.app> |
+| Backend health check | <https://rico-net-api-demo.onrender.com/healthz> |
+
+Demo login:
+
+```text
+username: admin
+password: demo1234
+```
+
+The backend runs on Render free tier, so the first request after inactivity can take 50+ seconds while the service wakes up.
+
+## Screenshots
+
+| Admin Operations Centre | NOC Dashboard |
+| --- | --- |
+| ![Admin dashboard](docs/screenshots/admin-dashboard.png) | ![NOC dashboard](docs/screenshots/noc-dashboard.png) |
+
 ## What This Shows
 
 - FastAPI backend with JWT auth, service-layer architecture, SQLAlchemy models, and PostgreSQL support
@@ -80,9 +103,10 @@ The seed script only creates synthetic usernames, phone numbers, addresses, MACs
 
 ## Deployment Summary
 
-- Put `frontend-pro/` on Vercel as the admin showcase.
-- Put `noc-dashboard/` on Vercel, Netlify, or Cloudflare Pages as the NOC showcase.
-- Put `backend/` on Render, Railway, Fly.io, or another free/low-cost Python host with PostgreSQL.
+- Current public admin deployment: Vercel project `rico-net-admin`.
+- Current public NOC deployment: Vercel project `rico-net-noc`.
+- Current public backend deployment: Render service `rico-net-api-demo`.
+- Current public database: Neon Postgres free tier with synthetic seed data.
 - Set `NEXT_PUBLIC_API_URL` and `VITE_API_URL` to the public backend URL.
 - Keep `OLT_PROXY_ENABLED=false` for public demos.
 
@@ -91,4 +115,3 @@ Full steps are in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 ## Safety Notes
 
 This is a portfolio/demo repository. Hardware control is disabled by default, all credentials are placeholders, and all datasets are fake. The private production repository remains separate.
-

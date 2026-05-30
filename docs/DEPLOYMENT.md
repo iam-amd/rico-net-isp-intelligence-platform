@@ -2,6 +2,25 @@
 
 This guide is for a public internship/portfolio demo. It favors free hosting and safe defaults over production operations.
 
+## Current Live Demo
+
+| Part | URL |
+| --- | --- |
+| GitHub repository | <https://github.com/iam-amd/rico-net-isp-intelligence-platform> |
+| Admin UI | <https://rico-net-admin.vercel.app> |
+| NOC UI | <https://rico-net-noc.vercel.app> |
+| Backend API | <https://rico-net-api-demo.onrender.com> |
+| Backend health check | <https://rico-net-api-demo.onrender.com/healthz> |
+
+Demo credentials:
+
+```text
+username: admin
+password: demo1234
+```
+
+The deployed backend uses Render free tier and can sleep after inactivity. If a page looks slow at first, open the health check and wait for the service to wake.
+
 ## Recommended Public Hosting
 
 | Part | Free-friendly host | Notes |
@@ -15,6 +34,8 @@ This guide is for a public internship/portfolio demo. It favors free hosting and
 Vercel is excellent for the frontend apps. FastAPI should usually be hosted separately on Render/Railway/Fly because it is a long-running API service with PostgreSQL.
 
 ## Backend On Render
+
+This public demo currently uses Render Docker deployment with `backend/Dockerfile`, because it can seed demo data during container startup.
 
 1. Create a new PostgreSQL database.
 2. Create a new Web Service from this repo.
@@ -108,3 +129,4 @@ Open the admin UI, log in as `admin` / `demo1234`, then check customer pages, ti
 - Include 3-5 screenshots: dashboard, customer DNA, NOC alarms, mobile app, architecture diagram.
 - In the description, focus on the engineering problem: mapping ISP billing identity to live OLT fiber diagnostics.
 
+Use [`LINKEDIN_POST.md`](LINKEDIN_POST.md) as a ready-to-edit post draft.
