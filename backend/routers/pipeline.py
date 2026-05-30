@@ -120,7 +120,7 @@ def _demo_customers(db: Session, limit: int, offset: int) -> dict:
     rows = db.execute(text("""
         SELECT c.username, c.first_name, c.last_name, c.phone, c.email, c.plan_name,
                c.expiry_date, c.balance, c.status, c.connection_status,
-               c.last_seen_online, c.mac_address, c.railwire_admin,
+               c.last_seen_online, c.mac_address,
                o.olt_host, o.pon_port, o.onu_index, o.status AS onu_status,
                o.polled_at, o.rx_power_dbm
         FROM customers c
@@ -132,6 +132,7 @@ def _demo_customers(db: Session, limit: int, offset: int) -> dict:
     customers = []
     for row in rows:
         item = dict(row)
+        item["railwire_admin"] = "demo"
         item["link_status"] = "linked" if item.get("olt_host") else "unlinked"
         item["binding_source"] = "synthetic_demo" if item.get("olt_host") else None
         item["confidence"] = "verified" if item.get("olt_host") else None
