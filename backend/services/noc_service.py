@@ -1003,13 +1003,13 @@ def get_onu_list(
 
     items = []
     for o in onus:
-        c = find_customer_for_observed_onu(
+        c = _fuzzy_find_customer(cust_index, o.mac_address) or find_customer_for_observed_onu(
             db,
             o.mac_address,
             olt_host=o.olt_host,
             pon_port=o.pon_port,
             onu_index=o.onu_index,
-        ) or _fuzzy_find_customer(cust_index, o.mac_address)
+        )
         items.append({
             "mac_address": o.mac_address,
             "olt_host": o.olt_host,
@@ -1547,13 +1547,13 @@ def get_heatmap_data(db: Session) -> List[Dict[str, Any]]:
 
     points = []
     for o in onus:
-        c = find_customer_for_observed_onu(
+        c = _fuzzy_find_customer(cust_index, o.mac_address) or find_customer_for_observed_onu(
             db,
             o.mac_address,
             olt_host=o.olt_host,
             pon_port=o.pon_port,
             onu_index=o.onu_index,
-        ) or _fuzzy_find_customer(cust_index, o.mac_address)
+        )
 
         lat, lng, has_exact = None, None, False
         location_tier = 3  # 1=GPS, 2=area, 3=cluster
