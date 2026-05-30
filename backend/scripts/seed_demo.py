@@ -179,7 +179,7 @@ def ensure_pg_buildings(db, customers_payload):
 
     db.flush()
 
-    pg_customers = customers_payload[::10][:len(buildings) * 6]
+    pg_customers = customers_payload[::5][:len(buildings) * 6]
     for bidx, building in enumerate(buildings):
         floor = db.query(models.PGFloor).filter_by(id=f"{building.id}-floor-1").first()
         if not floor:
