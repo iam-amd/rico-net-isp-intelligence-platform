@@ -1,0 +1,67 @@
+﻿{
+  "_readme": "Managed by snmp_audit.py + manual seeds. Loaded by snmp_client.py at runtime.",
+  "_snmp_port": 162,
+  "_enterprise_oid": "1.3.6.1.4.1.37950",
+  "_confirmed_2026-05-01": "All 3 OLTs SNMP-reachable on port 162. Optical (Rx/Tx/temp/voltage) is NOT in SNMP tree (0 negative integers in full walk). Use Telnet for optical. ifTable is primary SNMP data source.",
+  "10.10.10.100": {
+    "host": "10.10.10.100",
+    "snmp_reachable": true,
+    "snmp_port": 162,
+    "sys_descr": "V1600D",
+    "sys_object_id": "1.3.6.1.4.1.37950.1.1.5.10.14.1",
+    "enterprise_oids_found": ["1.3.6.1.4.1.37950"],
+    "iftable_available": true,
+    "iftable_onu_pattern": "EPON\\d\\dONU\\d+",
+    "oid_counts": {
+      "1.3.6.1.2.1.2.2": 8000,
+      "1.3.6.1.4.1.37950": 8000
+    },
+    "onu_interfaces": {},
+    "discoveries": {
+      "1.3.6.1.4.1.37950.1.1.5.10.3.2.1.3": {
+        "mac_col_prefix":    "1.3.6.1.4.1.37950.1.1.5.10.3.2.1.3",
+        "status_col_prefix": null,
+        "rx_col_prefix":     null,
+        "rx_multiplier":     null,
+        "index_type":   "numeric",
+        "index_depth":  1,
+        "verified_mac": "8c:c7:c3:ea:c7:09",
+        "verified_rx":  null,
+        "notes": "col3=MAC(hex), col5=name(EPON0/1:34 fmt). col4 always=1 (registered, not live status). ifOperStatus (ifTable col8) is the real online/offline source. Optical confirmed NOT in SNMP tree - 0 negative integers in 8000-OID walk."
+      }
+    },
+    "verified": false,
+    "notes": "ifTable primary source: 391 ONU entries (EPON01ONU1..EPON08ONU76). UP=287 DOWN=104. ifInOctets/ifOutOctets give per-ONU traffic. ifInErrors flags bad ONUs (e.g. EPON01ONU16=2004 errors). Optical not in SNMP.",
+    "audited_at": "2026-05-01T06:24:10Z"
+  },
+  "10.10.10.200": {
+    "host": "10.10.10.200",
+    "snmp_reachable": true,
+    "snmp_port": 162,
+    "sys_descr": "V1600G1",
+    "sys_object_id": "1.3.6.1.4.1.37950.1.1.5.10.14.1",
+    "enterprise_oids_found": [],
+    "iftable_available": false,
+    "oid_counts": {},
+    "onu_interfaces": {},
+    "discoveries": {},
+    "verified": false,
+    "notes": "GPON OLT1. Telnet-only â€” GPON uses SN:GPON... as mac_address key in onu_latest. SNMP ifTable would return real LAN MACs, causing duplicate rows. Cannot enable SNMP until identifier migration is done. Optical + status via Telnet CLI.",
+    "audited_at": "2026-05-02T00:00:00Z"
+  },
+  "10.10.10.210": {
+    "host": "10.10.10.210",
+    "snmp_reachable": true,
+    "snmp_port": 162,
+    "sys_descr": "V1600G1B",
+    "sys_object_id": "1.3.6.1.4.1.37950.1.1.5.10.14.1",
+    "enterprise_oids_found": [],
+    "iftable_available": false,
+    "oid_counts": {},
+    "onu_interfaces": {},
+    "discoveries": {},
+    "verified": false,
+    "notes": "GPON OLT2. Same as .200 â€” Telnet-only until SNâ†’MAC identifier migration is done.",
+    "audited_at": "2026-05-02T00:00:00Z"
+  }
+}

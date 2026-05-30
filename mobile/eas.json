@@ -1,0 +1,43 @@
+﻿{
+  "cli": {
+    "version": ">= 3.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_ENV": "localhost"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_ENV": "production",
+        "EXPO_PUBLIC_PRODUCTION_API_URL": "http://100.x.x.x:8000"
+      }
+    },
+    "phone-test": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_ENV": "lan",
+        "EXPO_PUBLIC_LAN_API_URL": "http://192.168.1.35:8000"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_ENV": "production",
+        "EXPO_PUBLIC_PRODUCTION_API_URL": "http://100.x.x.x:8000"
+      }
+    }
+  }
+}

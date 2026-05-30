@@ -1,0 +1,5 @@
+username,first_name,last_name,phone,plan_name,status,mac_address
+RNDEMO001,Asha,Raman,9000001001,100 Mbps Unlimited,Active,02:10:00:00:00:01
+RNDEMO002,Vikram,Selvan,9000001002,150 Mbps Unlimited,Active,02:10:00:00:00:02
+RNDEMO003,Meena,Kumar,9000001003,75 Mbps Basic,Expired,02:10:00:00:00:03
+

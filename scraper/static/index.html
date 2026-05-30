@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rico Net — Scraper Command Center</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body,input,select,button,textarea{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;}
+:root{
+  --bg:#07070a;--bg2:#0f0f14;--bg3:#16161e;--bg4:#1e1e28;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
+  --text:#f0f0f5;--text2:#8888a0;--text3:#55556a;
+  --blue:#3b82f6;--green:#22c55e;--orange:#f59e0b;--red:#ef4444;--purple:#a855f7;
+  --sidebar:220px;
+}
+body{background:var(--bg);color:var(--text);display:flex;min-height:100vh;overflow:hidden;}
+#sidebar{width:var(--sidebar);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 12px;gap:4px;flex-shrink:0;}
+.logo{display:flex;align-items:center;gap:10px;padding:12px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:20px;}
+.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--blue),var(--purple));border-radius:10px;display:grid;place-items:center;flex-shrink:0;}
+.logo-text{font-weight:700;font-size:15px;line-height:1.2;}
+.logo-sub{font-size:10px;color:var(--text3);}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;color:var(--text2);font-size:13px;font-weight:500;transition:.2s;border:none;background:transparent;width:100%;text-align:left;}
+.nav-item:hover{background:var(--bg4);color:var(--text);}
+.nav-item.active{background:rgba(59,130,246,.15);color:var(--blue);}
+.nav-item i{width:16px;height:16px;flex-shrink:0;}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);margin-left:auto;flex-shrink:0;transition:.3s;}
+.status-dot.running{background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+#main{flex:1;overflow-y:auto;background:radial-gradient(ellipse at 60% 0%,rgba(59,130,246,.06) 0%,transparent 60%),var(--bg);}
+.page{display:none;padding:36px;animation:fadein .25s ease;}
+.page.active{display:block;}
+@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.page-header{margin-bottom:28px;}
+.page-title{font-size:26px;font-weight:700;letter-spacing:-.5px;}
+.page-sub{color:var(--text2);font-size:13px;margin-top:4px;}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px;}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:22px;}
+.card-label{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.card-value{font-size:32px;font-weight:700;line-height:1;}
+.card-sub{font-size:11px;color:var(--text3);margin-top:6px;}
+.scraper-status-bar{display:flex;align-items:center;gap:16px;padding:18px 22px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;margin-bottom:20px;}
+.status-indicator{width:48px;height:48px;border-radius:12px;display:grid;place-items:center;flex-shrink:0;}
+.status-indicator.idle{background:rgba(136,136,160,.1);color:var(--text2);}
+.status-indicator.running{background:rgba(34,197,94,.1);color:var(--green);}
+.table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px;}
+.table-toolbar{padding:16px 20px;display:flex;gap:10px;align-items:center;border-bottom:1px solid var(--border);}
+.table-toolbar-title{font-weight:600;font-size:14px;flex:1;}
+.tbl{width:100%;border-collapse:collapse;}
+.tbl th{padding:11px 16px;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);background:var(--bg3);border-bottom:1px solid var(--border);text-align:left;white-space:nowrap;}
+.tbl td{padding:12px 16px;font-size:13px;border-bottom:1px solid rgba(255,255,255,.04);}
+.tbl tr{transition:.15s;}
+.tbl tbody tr:hover{background:rgba(255,255,255,.03);cursor:pointer;}
+.tbl-scroll{max-height:calc(100vh - 300px);overflow-y:auto;}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:10px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;}
+.badge.green{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.25);}
+.badge.red{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25);}
+.badge.blue{background:rgba(59,130,246,.12);color:var(--blue);border:1px solid rgba(59,130,246,.25);}
+.badge.orange{background:rgba(245,158,11,.12);color:var(--orange);border:1px solid rgba(245,158,11,.25);}
+.badge.purple{background:rgba(168,85,247,.12);color:var(--purple);border:1px solid rgba(168,85,247,.25);}
+.badge.gray{background:rgba(255,255,255,.06);color:var(--text2);border:1px solid var(--border);}
+input,select,textarea{background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:8px 14px;border-radius:8px;outline:none;font-size:13px;font-family:inherit;transition:.2s;}
+select{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238888a0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px;}
+input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,130,246,.15);}
+input[type=range]{padding:4px 0;cursor:pointer;accent-color:var(--blue);}
+.btn{padding:8px 16px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:.2s;font-family:inherit;}
+.btn-primary{background:var(--blue);color:#fff;}
+.btn-primary:hover{background:#2563eb;}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2);}
+.btn-ghost:hover{color:var(--text);background:var(--bg4);}
+.btn-danger{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.25);}
+.btn-danger:hover{background:rgba(239,68,68,.2);}
+.log-box{background:#0a0a0f;border:1px solid var(--border);border-radius:12px;overflow:hidden;height:calc(100vh - 260px);display:flex;flex-direction:column;}
+.log-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;font-size:12px;font-weight:600;background:var(--bg2);}
+.log-body{flex:1;overflow-y:auto;padding:12px 16px;font-family:'JetBrains Mono','Fira Code',monospace;font-size:12px;line-height:1.7;}
+.log-line{white-space:pre-wrap;word-break:break-all;}
+.log-line.err{color:#ef4444;}.log-line.warn{color:#f59e0b;}.log-line.info{color:#8888a0;}.log-line.ok{color:#22c55e;}
+#profile-panel{position:fixed;top:0;right:-600px;width:580px;height:100vh;background:rgba(10,10,16,.97);backdrop-filter:blur(30px);border-left:1px solid var(--border2);transition:.4s cubic-bezier(.16,1,.3,1);z-index:200;padding:28px;overflow-y:auto;box-shadow:-20px 0 60px rgba(0,0,0,.6);}
+#profile-panel.open{right:0;}
+.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;}
+.kv-k{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:3px;}
+.kv-v{font-size:13px;color:var(--text);word-break:break-all;}
+.kv-pair.full{grid-column:1/span 2;}
+.timeline-item{display:flex;gap:14px;margin-bottom:16px;}
+.tl-dot{width:24px;height:24px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;}
+.tl-body{flex:1;background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:10px;padding:14px;}
+.job-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;display:flex;align-items:center;gap:16px;margin-bottom:12px;}
+.job-icon{width:44px;height:44px;border-radius:10px;display:grid;place-items:center;flex-shrink:0;}
+.setting-section{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px;}
+.setting-section h3{font-size:14px;font-weight:600;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+.field-label{font-size:12px;color:var(--text2);margin-bottom:6px;margin-top:14px;}
+.trigger-btn{width:100%;padding:14px 18px;border-radius:10px;border:none;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:10px;font-family:inherit;transition:.2s;}
+.trigger-btn:hover{filter:brightness(1.2);}
+.progress-bar-wrap{background:rgba(255,255,255,.05);border-radius:99px;height:8px;overflow:hidden;margin-top:6px;}
+.progress-bar-inner{height:100%;border-radius:99px;transition:width 1s ease;}
+.quality-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
+.quality-item:last-child{border-bottom:none;}
+.quality-label{font-size:13px;font-weight:500;}
+.quality-pct{font-size:13px;font-weight:700;}
+.run-row-ok{color:var(--green);}
+.run-row-fail{color:var(--red);}
+.run-row-running{color:var(--blue);}
+#toast{position:fixed;bottom:28px;right:28px;background:var(--blue);color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;z-index:999;opacity:0;transform:translateY(10px);transition:.3s;pointer-events:none;}
+#toast.show{opacity:1;transform:translateY(0);}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:6px;}
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <div class="logo">
+    <div class="logo-icon"><i data-lucide="radio" style="width:18px;height:18px;color:#fff"></i></div>
+    <div><div class="logo-text">Rico Net</div><div class="logo-sub">Scraper v2</div></div>
+  </div>
+  <button class="nav-item active" onclick="nav('dashboard')" id="nav-dashboard"><i data-lucide="layout-dashboard"></i>Dashboard<div class="status-dot" id="scraper-dot"></div></button>
+  <button class="nav-item" onclick="nav('runs')" id="nav-runs"><i data-lucide="history"></i>Run History</button>
+  <button class="nav-item" onclick="nav('quality')" id="nav-quality"><i data-lucide="bar-chart-2"></i>Data Quality</button>
+  <button class="nav-item" onclick="nav('customers')" id="nav-customers"><i data-lucide="users"></i>Customers</button>
+  <button class="nav-item" onclick="nav('logs')" id="nav-logs"><i data-lucide="terminal"></i>Live Logs</button>
+  <button class="nav-item" onclick="nav('scheduler')" id="nav-scheduler"><i data-lucide="clock"></i>Scheduler</button>
+  <button class="nav-item" onclick="nav('settings')" id="nav-settings"><i data-lucide="settings"></i>Settings</button>
+  <div style="margin-top:auto;padding:12px;font-size:11px;color:var(--text3);border-top:1px solid var(--border);margin-top:12px;">
+    <div id="sidebar-status">Checking...</div>
+  </div>
+</div>
+
+<div id="main">
+
+<!-- ═══════════ DASHBOARD ═══════════ -->
+<div class="page active" id="page-dashboard">
+  <div class="page-header">
+    <div class="page-title">Dashboard</div>
+    <div class="page-sub">Real-time overview — Rico Net Scraper Command Center</div>
+  </div>
+  <div class="scraper-status-bar">
+    <div class="status-indicator idle" id="status-ind"><i data-lucide="cpu" style="width:22px;height:22px;"></i></div>
+    <div style="flex:1;">
+      <div id="status-title" style="font-weight:600;font-size:15px;">Checking status...</div>
+      <div id="status-sub" style="color:var(--text2);font-size:12px;margin-top:2px;"></div>
+    </div>
+    <button class="btn btn-ghost" onclick="refreshAll()"><i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Refresh</button>
+  </div>
+  <div class="grid4" id="metrics-grid">
+    <div class="card"><div class="card-label"><i data-lucide="users" style="width:12px;height:12px;color:var(--blue)"></i>Total Customers</div><div class="card-value" id="m-total">—</div></div>
+    <div class="card"><div class="card-label"><i data-lucide="activity" style="width:12px;height:12px;color:var(--green)"></i>Active</div><div class="card-value" id="m-active" style="color:var(--green)">—</div></div>
+    <div class="card"><div class="card-label"><i data-lucide="wifi" style="width:12px;height:12px;color:var(--orange)"></i>MAC Extracted</div><div class="card-value" id="m-mac" style="color:var(--orange)">—</div><div class="card-sub" id="m-mac-pct"></div></div>
+    <div class="card"><div class="card-label"><i data-lucide="alert-triangle" style="width:12px;height:12px;color:var(--red)"></i>Missing MAC (Active)</div><div class="card-value" id="m-nomac" style="color:var(--red)">—</div></div>
+  </div>
+  <div class="card" style="margin-bottom:20px;">
+    <div style="font-weight:600;margin-bottom:12px;font-size:14px;">MAC Extraction Progress</div>
+    <div class="progress-bar-wrap"><div id="mac-bar" class="progress-bar-inner" style="background:linear-gradient(90deg,var(--blue),var(--purple));width:0%"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-top:6px;">
+      <span id="mac-bar-label">Loading...</span><span id="mac-bar-pct" style="font-weight:600;">0%</span>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+    <button class="btn" style="background:rgba(245,158,11,.1);color:var(--orange);border:1px solid rgba(245,158,11,.2);" onclick="trigger('scrape-mac')"><i data-lucide="search" style="width:14px;height:14px;"></i>Extract MACs</button>
+    <button class="btn" style="background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.2);" onclick="trigger('scrape-csv')"><i data-lucide="download-cloud" style="width:14px;height:14px;"></i>Sync CSV</button>
+    <button class="btn" style="background:rgba(168,85,247,.1);color:var(--purple);border:1px solid rgba(168,85,247,.2);" onclick="trigger('scrape-details')"><i data-lucide="file-text" style="width:14px;height:14px;"></i>Scrape Details</button>
+    <button class="btn btn-ghost" onclick="trigger('generate-session')"><i data-lucide="shield" style="width:14px;height:14px;"></i>AI Session Renewal</button>
+  </div>
+
+  <!-- Health kv -->
+  <div class="card" style="margin-bottom:20px;">
+    <div style="font-weight:600;margin-bottom:14px;font-size:14px;display:flex;align-items:center;gap:8px;"><i data-lucide="heart-pulse" style="width:15px;height:15px;color:var(--green)"></i>System Health</div>
+    <div id="health-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;"></div>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-toolbar"><span class="table-toolbar-title">Recent Audit Events</span></div>
+    <div class="tbl-scroll"><table class="tbl"><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Field</th><th>New Value</th></tr></thead><tbody id="recent-audit"></tbody></table></div>
+  </div>
+</div>
+
+<!-- ═══════════ RUN HISTORY ═══════════ -->
+<div class="page" id="page-runs">
+  <div class="page-header" style="display:flex;align-items:center;">
+    <div><div class="page-title">Run History</div><div class="page-sub">Every scraper execution logged with duration and record counts</div></div>
+    <div style="margin-left:auto;display:flex;gap:8px;">
+      <select id="run-step-filter" onchange="loadRuns()" style="width:auto;">
+        <option value="">All Steps</option>
+        <option value="csv">CSV</option>
+        <option value="details">Details</option>
+        <option value="mac">MAC</option>
+        <option value="daily">Daily</option>
+        <option value="single">Single</option>
+      </select>
+      <button class="btn btn-ghost" onclick="loadRuns()"><i data-lucide="refresh-cw" style="width:14px;height:14px;"></i></button>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <div class="tbl-scroll" style="max-height:calc(100vh - 220px);">
+      <table class="tbl">
+        <thead><tr><th>#</th><th>Step</th><th>Status</th><th>Started</th><th>Duration</th><th>Processed</th><th>Created</th><th>Updated</th><th>Errors</th><th>Notes</th></tr></thead>
+        <tbody id="runs-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ DATA QUALITY ═══════════ -->
+<div class="page" id="page-quality">
+  <div class="page-header" style="display:flex;align-items:center;">
+    <div><div class="page-title">Data Quality</div><div class="page-sub">Coverage scorecard and gap-fill prioritization</div></div>
+    <button class="btn btn-ghost" style="margin-left:auto;" onclick="loadQuality()"><i data-lucide="refresh-cw" style="width:14px;height:14px;"></i></button>
+  </div>
+  <div class="grid2">
+    <!-- Scorecard -->
+    <div class="card">
+      <div style="font-weight:600;font-size:14px;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><i data-lucide="bar-chart-2" style="width:14px;height:14px;color:var(--blue)"></i>Coverage Scorecard</div>
+      <div id="quality-scorecard"></div>
+    </div>
+    <!-- Gaps -->
+    <div>
+      <div class="card" style="margin-bottom:16px;">
+        <div style="font-weight:600;font-size:14px;margin-bottom:12px;display:flex;align-items:center;gap:8px;"><i data-lucide="alert-circle" style="width:14px;height:14px;color:var(--orange)"></i>Data Gaps</div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <button class="btn btn-ghost" onclick="loadGaps('mac')" id="gap-btn-mac">MAC</button>
+          <button class="btn btn-ghost" onclick="loadGaps('detail')" id="gap-btn-detail">Details</button>
+          <button class="btn btn-ghost" onclick="loadGaps('name')" id="gap-btn-name">Name</button>
+          <button class="btn btn-ghost" onclick="loadGaps('address')" id="gap-btn-address">Address</button>
+        </div>
+        <div id="gap-count" style="font-size:12px;color:var(--text3);margin-bottom:10px;"></div>
+        <div id="gap-list" style="max-height:300px;overflow-y:auto;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ CUSTOMERS ═══════════ -->
+<div class="page" id="page-customers">
+  <div class="page-header">
+    <div class="page-title">Customers</div>
+    <div class="page-sub" id="cust-count">Loading...</div>
+  </div>
+  <div class="table-wrap">
+    <div class="table-toolbar">
+      <span class="table-toolbar-title">Customer Database</span>
+      <input type="text" id="cust-search" placeholder="Search username / name..." oninput="renderCustomers()" style="width:220px;">
+      <select id="cust-status" onchange="renderCustomers()" style="width:auto;"><option value="">All Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option></select>
+      <select id="cust-mac" onchange="renderCustomers()" style="width:auto;"><option value="">All MACs</option><option value="has">MAC Found</option><option value="missing">MAC Missing</option></select>
+      <button class="btn btn-ghost" onclick="loadCustomers()"><i data-lucide="refresh-cw" style="width:14px;height:14px;"></i></button>
+    </div>
+    <div class="tbl-scroll"><table class="tbl"><thead><tr><th>#</th><th>Username</th><th>Name</th><th>MAC Address</th><th>Plan</th><th>Balance</th><th>Status</th><th>Railwire</th></tr></thead><tbody id="cust-body"></tbody></table></div>
+  </div>
+</div>
+
+<!-- ═══════════ LOGS ═══════════ -->
+<div class="page" id="page-logs">
+  <div class="page-header" style="display:flex;align-items:center;">
+    <div><div class="page-title">Live Logs</div><div class="page-sub">Tailed output from scraper, scheduler, and MAC processes</div></div>
+    <div style="margin-left:auto;display:flex;gap:8px;">
+      <select id="log-lines" onchange="loadLogs()" style="width:auto;"><option value="100">100 lines</option><option value="300" selected>300 lines</option><option value="500">500 lines</option></select>
+      <button class="btn btn-ghost" onclick="loadLogs()"><i data-lucide="refresh-cw" style="width:14px;height:14px;"></i></button>
+      <button class="btn btn-ghost" id="autoscroll-btn" onclick="toggleAutoScroll()"><i data-lucide="arrow-down" style="width:14px;height:14px;"></i> Auto</button>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:20px;height:calc(100vh - 200px);overflow-y:auto;padding-bottom:20px;">
+    <div class="log-box"><div class="log-header"><i data-lucide="zap" style="width:14px;height:14px;color:var(--blue)"></i>scraper.log<span id="scraper-log-count" style="margin-left:auto;color:var(--text3);font-weight:400;"></span></div><div class="log-body" id="scraper-log"></div></div>
+    <div class="log-box"><div class="log-header"><i data-lucide="search" style="width:14px;height:14px;color:var(--orange)"></i>mac_scrape.log<span id="mac-log-count" style="margin-left:auto;color:var(--text3);font-weight:400;"></span></div><div class="log-body" id="mac-log"></div></div>
+    <div class="log-box"><div class="log-header"><i data-lucide="download-cloud" style="width:14px;height:14px;color:var(--green)"></i>csv_scrape.log<span id="csv-log-count" style="margin-left:auto;color:var(--text3);font-weight:400;"></span></div><div class="log-body" id="csv-log"></div></div>
+    <div class="log-box"><div class="log-header"><i data-lucide="file-text" style="width:14px;height:14px;color:var(--purple)"></i>details_scrape.log<span id="details-log-count" style="margin-left:auto;color:var(--text3);font-weight:400;"></span></div><div class="log-body" id="details-log"></div></div>
+    <div class="log-box"><div class="log-header"><i data-lucide="clock" style="width:14px;height:14px;color:var(--text2)"></i>scheduler.log<span id="scheduler-log-count" style="margin-left:auto;color:var(--text3);font-weight:400;"></span></div><div class="log-body" id="scheduler-log"></div></div>
+    <div class="log-box"><div class="log-header"><i data-lucide="user" style="width:14px;height:14px;color:var(--text2)"></i>single_scrape.log<span id="single-log-count" style="margin-left:auto;color:var(--text3);font-weight:400;"></span></div><div class="log-body" id="single-log"></div></div>
+  </div>
+</div>
+
+<!-- ═══════════ SCHEDULER ═══════════ -->
+<div class="page" id="page-scheduler">
+  <div class="page-header" style="display:flex;align-items:center;">
+    <div><div class="page-title">Scheduler</div><div class="page-sub">Automated scraping job manager</div></div>
+    <button class="btn btn-ghost" style="margin-left:auto;" onclick="loadScheduler()"><i data-lucide="refresh-cw" style="width:14px;height:14px;"></i></button>
+  </div>
+  <div class="card" style="margin-bottom:20px;">
+    <div style="display:flex;align-items:center;gap:16px;">
+      <div id="sched-status-icon" class="job-icon" style="background:rgba(136,136,160,.1);"><i data-lucide="clock" style="width:20px;height:20px;color:var(--text2)"></i></div>
+      <div style="flex:1;">
+        <div id="sched-status-text" style="font-weight:600;font-size:15px;">Checking scheduler…</div>
+        <div id="sched-heartbeat" style="color:var(--text2);font-size:12px;margin-top:2px;"></div>
+      </div>
+      <div id="sched-status-badge"></div>
+    </div>
+  </div>
+  <div id="jobs-list"></div>
+</div>
+
+<!-- ═══════════ SETTINGS ═══════════ -->
+<div class="page" id="page-settings">
+  <div class="page-header">
+    <div class="page-title">Settings</div>
+    <div class="page-sub">Account credentials, anti-detection delays, AI CAPTCHA, and job schedules</div>
+  </div>
+  <div class="grid2">
+    <div>
+      <!-- Account Config -->
+      <div class="setting-section">
+        <h3>Account Configuration</h3>
+        <div class="field-label">Active Admin Username</div>
+        <input type="text" id="cfg-active" style="width:100%;" placeholder="e.g. 2760804276">
+        <div class="field-label">MAC Batch Size</div>
+        <select id="cfg-batch" style="width:100%;">
+          <option value="20">20 per run (Safest)</option>
+          <option value="50">50 per run</option>
+          <option value="100" selected>100 per run</option>
+          <option value="250">250 per run</option>
+          <option value="500">500 per run (High Risk)</option>
+        </select>
+        <div class="field-label">Scheduler</div>
+        <select id="cfg-scheduler" style="width:100%;"><option value="true">Enabled</option><option value="false">Paused</option></select>
+        <div style="margin-top:20px;font-size:13px;font-weight:600;margin-bottom:10px;">Managed Accounts</div>
+        <div id="accounts-list"></div>
+        <button class="btn btn-ghost" style="width:100%;margin-bottom:14px;" onclick="addAccount()"><i data-lucide="plus" style="width:14px;height:14px;"></i> Add Account</button>
+      </div>
+
+      <!-- AI CAPTCHA -->
+      <div class="setting-section">
+        <h3><i data-lucide="bot" style="width:14px;height:14px;vertical-align:middle;margin-right:6px;"></i>AI CAPTCHA (Claude Vision)</h3>
+        <p style="color:var(--text2);font-size:12px;margin-bottom:14px;">When set, sessions are renewed automatically using Claude Haiku — no manual login ever needed.</p>
+        <div class="field-label">Anthropic API Key</div>
+        <input type="password" id="cfg-api-key" style="width:100%;" placeholder="sk-ant-... (leave blank to keep existing)">
+        <div style="font-size:11px;color:var(--text3);margin-top:6px;">Key is stored in config.json on disk — never sent externally by this dashboard.</div>
+      </div>
+
+      <button class="btn btn-primary" style="width:100%;padding:14px;justify-content:center;" onclick="saveConfig()"><i data-lucide="save" style="width:14px;height:14px;"></i> Save All Settings</button>
+    </div>
+
+    <div>
+      <!-- Anti-detection delays -->
+      <div class="setting-section">
+        <h3><i data-lucide="shield" style="width:14px;height:14px;vertical-align:middle;margin-right:6px;"></i>Anti-Detection Delays</h3>
+        <p style="color:var(--text2);font-size:12px;margin-bottom:14px;">Controls how long the scraper waits between each MAC page load. Longer = safer but slower.</p>
+        <div class="field-label">Min Delay (seconds): <span id="delay-min-label" style="color:var(--blue);font-weight:600;">20s</span></div>
+        <input type="range" id="cfg-delay-min" min="5" max="60" value="20" style="width:100%;" oninput="document.getElementById('delay-min-label').innerText=this.value+'s'">
+        <div class="field-label">Max Delay (seconds): <span id="delay-max-label" style="color:var(--blue);font-weight:600;">35s</span></div>
+        <input type="range" id="cfg-delay-max" min="10" max="120" value="35" style="width:100%;" oninput="document.getElementById('delay-max-label').innerText=this.value+'s'">
+        <div style="font-size:11px;color:var(--text3);margin-top:10px;">Recommended: 20–35s (default). Below 10s risks detection and IP ban.</div>
+      </div>
+
+      <!-- Schedule times -->
+      <div class="setting-section">
+        <h3><i data-lucide="clock" style="width:14px;height:14px;vertical-align:middle;margin-right:6px;"></i>Scheduler Timing</h3>
+        <p style="color:var(--text2);font-size:12px;margin-bottom:14px;">Restart the scheduler after changing these for them to take effect.</p>
+        <div class="field-label">CSV Sync (daily hour, 0-23)</div>
+        <input type="number" id="cfg-csv-hour" min="0" max="23" value="2" style="width:100%;">
+        <div class="field-label">Details Scrape (daily hour, 0-23)</div>
+        <input type="number" id="cfg-details-hour" min="0" max="23" value="3" style="width:100%;">
+        <div class="field-label">MAC Scrape Interval (hours)</div>
+        <select id="cfg-mac-interval" style="width:100%;">
+          <option value="1">Every 1 hour</option>
+          <option value="2" selected>Every 2 hours</option>
+          <option value="3">Every 3 hours</option>
+          <option value="4">Every 4 hours</option>
+          <option value="6">Every 6 hours</option>
+        </select>
+      </div>
+
+      <!-- Manual triggers -->
+      <div class="setting-section">
+        <h3>Manual Triggers</h3>
+        <button class="trigger-btn" style="background:rgba(245,158,11,.1);color:var(--orange);border:1px solid rgba(245,158,11,.2);" onclick="trigger('scrape-mac')">
+          <span><i data-lucide="search" style="width:14px;height:14px;vertical-align:middle;margin-right:8px;"></i>Extract Missing MACs</span><span style="font-size:11px;opacity:.6;">Background</span>
+        </button>
+        <button class="trigger-btn" style="background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.2);" onclick="trigger('scrape-csv')">
+          <span><i data-lucide="download-cloud" style="width:14px;height:14px;vertical-align:middle;margin-right:8px;"></i>Sync CSV</span><span style="font-size:11px;opacity:.6;">Background</span>
+        </button>
+        <button class="trigger-btn" style="background:rgba(168,85,247,.1);color:var(--purple);border:1px solid rgba(168,85,247,.2);" onclick="trigger('scrape-details')">
+          <span><i data-lucide="file-text" style="width:14px;height:14px;vertical-align:middle;margin-right:8px;"></i>Names & Addresses</span><span style="font-size:11px;opacity:.6;">Background</span>
+        </button>
+        <button class="trigger-btn" style="background:rgba(59,130,246,.1);color:var(--blue);border:1px solid rgba(59,130,246,.2);" onclick="trigger('scrape-all')">
+          <span><i data-lucide="play" style="width:14px;height:14px;vertical-align:middle;margin-right:8px;"></i>Run All Steps</span><span style="font-size:11px;opacity:.6;">Background</span>
+        </button>
+        <button class="trigger-btn" style="background:rgba(255,255,255,.04);color:var(--text);border:1px solid var(--border2);" onclick="trigger('generate-session')">
+          <span><i data-lucide="bot" style="width:14px;height:14px;vertical-align:middle;margin-right:8px;"></i>AI Session Renewal</span><span style="font-size:11px;opacity:.6;">Headless</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- #main -->
+
+<!-- PROFILE PANEL -->
+<div id="profile-panel">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;">
+    <div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);">Customer</div>
+      <div id="pp-username" style="font-size:22px;font-weight:700;margin-top:4px;">—</div>
+    </div>
+    <button class="btn btn-ghost" onclick="closePanel()"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
+  </div>
+  <div id="pp-details"></div>
+  <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin:16px 0 12px;border-top:1px solid var(--border);padding-top:16px;">Audit Timeline</div>
+  <div id="pp-timeline"></div>
+</div>
+
+<div id="toast"></div>
+
+<script src="/static/lucide.min.js"></script>
+<script>
+let allCustomers=[], autoScroll=true, logInterval=null;
+
+function safeIcons(){try{if(window.lucide)lucide.createIcons();}catch(e){}}
+
+function nav(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.getElementById('nav-'+page).classList.add('active');
+  clearInterval(logInterval);logInterval=null;
+  if(page==='logs'){loadLogs();logInterval=setInterval(loadLogs,8000);}
+  if(page==='customers')loadCustomers();
+  if(page==='scheduler')loadScheduler();
+  if(page==='settings')loadConfig();
+  if(page==='dashboard')refreshAll();
+  if(page==='runs')loadRuns();
+  if(page==='quality'){loadQuality();loadGaps('mac');}
+  safeIcons();
+}
+
+function toast(msg,color='var(--blue)'){
+  const el=document.getElementById('toast');
+  el.innerText=msg;el.style.background=color;el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),4000);
+}
+
+/* ─── STATUS ─────────────────── */
+async function checkStatus(){
+  try{
+    const d=await(await fetch('/api/scraper/status')).json();
+    const dot=document.getElementById('scraper-dot');
+    const ind=document.getElementById('status-ind');
+    const sb=document.getElementById('sidebar-status');
+    if(d.running){
+      dot.className='status-dot running';
+      ind.className='status-indicator running';
+      document.getElementById('status-title').innerText='Scraper Running';
+      document.getElementById('status-sub').innerText=`Step: ${d.step||'unknown'} · PID: ${d.pid}`;
+      sb.innerHTML='<span style="color:var(--green)">● Running</span>';
+    }else{
+      dot.className='status-dot';
+      ind.className='status-indicator idle';
+      document.getElementById('status-title').innerText='Scraper Idle';
+      document.getElementById('status-sub').innerText='No active operation';
+      sb.innerHTML='<span style="color:var(--text3)">● Idle</span>';
+    }
+    safeIcons();
+  }catch(e){}
+}
+
+/* ─── METRICS ─────────────────── */
+async function loadMetrics(){
+  try{
+    const d=await(await fetch('/api/metrics')).json();
+    document.getElementById('m-total').innerText=(d.total_customers||0).toLocaleString();
+    document.getElementById('m-active').innerText=(d.active_customers||0).toLocaleString();
+    document.getElementById('m-mac').innerText=(d.with_mac||0).toLocaleString();
+    document.getElementById('m-mac-pct').innerText=(d.mac_coverage_pct||0)+'% coverage';
+    document.getElementById('m-nomac').innerText=(d.missing_mac_active||0).toLocaleString();
+    const pct=d.mac_coverage_pct||0;
+    document.getElementById('mac-bar').style.width=pct+'%';
+    document.getElementById('mac-bar-label').innerText=`${d.with_mac} of ${d.total_customers} customers have MAC addresses`;
+    document.getElementById('mac-bar-pct').innerText=pct+'%';
+  }catch(e){}
+}
+
+/* ─── HEALTH ─────────────────── */
+async function loadHealth(){
+  try{
+    const d=await(await fetch('/api/health')).json();
+    const grid=document.getElementById('health-grid');
+    const keys=Object.keys(d);
+    if(!keys.length){grid.innerHTML='<div style="color:var(--text3);font-size:12px;">No health data yet — run a scrape first.</div>';return;}
+    grid.innerHTML=keys.map(k=>{
+      const v=d[k];
+      const label=k.replace(/_/g,' ');
+      const val=v.value||'—';
+      let color='var(--text)';
+      if(/failed|error/i.test(val))color='var(--red)';
+      else if(/running/i.test(val))color='var(--green)';
+      return`<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:4px;">${esc(label)}</div>
+        <div style="font-size:13px;font-weight:500;color:${color};word-break:break-all;">${esc(val)}</div>
+        ${v.updated_at?`<div style="font-size:10px;color:var(--text3);margin-top:4px;">${new Date(v.updated_at).toLocaleTimeString()}</div>`:''}
+      </div>`;
+    }).join('');
+  }catch(e){}
+}
+
+/* ─── RECENT AUDIT ─────────────── */
+async function loadRecentAudit(){
+  try{
+    const logs=await(await fetch('/api/audit?limit=20')).json();
+    document.getElementById('recent-audit').innerHTML=logs.map(l=>`
+      <tr onclick="openProfile('${esc(l.customer_id)}')">
+        <td style="color:var(--text3);font-size:11px;">${new Date(l.changed_at).toLocaleString()}</td>
+        <td style="color:var(--blue);font-weight:500;">${esc(l.customer_id)}</td>
+        <td><span class="badge ${l.action==='CREATE'?'green':'blue'}">${l.action}</span></td>
+        <td style="color:var(--orange);font-family:monospace;font-size:11px;">${l.field_name||'—'}</td>
+        <td style="font-size:12px;color:var(--green);">${l.new_value?esc(l.new_value.slice(0,40)):'—'}</td>
+      </tr>`).join('');
+  }catch(e){}
+}
+
+function refreshAll(){checkStatus();loadMetrics();loadHealth();loadRecentAudit();}
+
+/* ─── CUSTOMERS ─────────────────── */
+async function loadCustomers(){
+  try{
+    const d=await(await fetch('/api/customers?limit=2000')).json();
+    allCustomers=d.items||[];
+    document.getElementById('cust-count').innerText=`${d.total.toLocaleString()} total customers`;
+    renderCustomers();
+  }catch(e){document.getElementById('cust-count').innerText='Failed to load';}
+}
+function renderCustomers(){
+  const q=document.getElementById('cust-search').value.toLowerCase();
+  const st=document.getElementById('cust-status').value;
+  const mc=document.getElementById('cust-mac').value;
+  let data=allCustomers.filter(c=>{
+    if(q&&!((c.username||'').toLowerCase().includes(q)||(c.full_name||'').toLowerCase().includes(q)))return false;
+    if(st&&c.account_status!==st)return false;
+    if(mc==='has'&&(!c.mac_address||c.mac_address===''))return false;
+    if(mc==='missing'&&c.mac_address&&c.mac_address!=='')return false;
+    return true;
+  });
+  const rw_badge=(s)=>s==='not_found'?'<span class="badge red">Not Found</span>':'<span class="badge green">Active</span>';
+  document.getElementById('cust-body').innerHTML=data.slice(0,1000).map((c,i)=>`
+    <tr onclick="openProfile('${esc(c.username)}')">
+      <td style="color:var(--text3);font-size:11px;">${i+1}</td>
+      <td style="color:var(--blue);font-weight:500;">${esc(c.username)}</td>
+      <td>${esc(c.full_name||'—')}</td>
+      <td style="font-family:monospace;font-size:12px;color:${c.mac_address?'var(--orange)':'var(--red)'};">${c.mac_address||'MISSING'}</td>
+      <td style="font-size:12px;">${esc(c.plan_name||'—')}</td>
+      <td style="${c.account_balance>0?'color:var(--red)':'color:var(--text2)'}">₹${c.account_balance||0}</td>
+      <td><span class="badge ${c.account_status==='Active'?'green':'red'}">${c.account_status||'?'}</span></td>
+      <td>${rw_badge(c.railwire_status)}</td>
+    </tr>`).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:40px;">No results</td></tr>';
+}
+
+/* ─── LOGS ─────────────────────── */
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function colorLine(line){
+  if(/ERROR|FAILED|❌|Exception|Traceback/i.test(line))return`<div class="log-line err">${esc(line)}</div>`;
+  if(/WARNING|WARN|⚠/i.test(line))return`<div class="log-line warn">${esc(line)}</div>`;
+  if(/✅|complete|success|found|saved|renewed/i.test(line))return`<div class="log-line ok">${esc(line)}</div>`;
+  return`<div class="log-line info">${esc(line)}</div>`;
+}
+async function loadLogs(){
+  const n=document.getElementById('log-lines').value;
+  const types=['scraper','mac','csv','details','scheduler','single'];
+  const ids=['scraper-log','mac-log','csv-log','details-log','scheduler-log','single-log'];
+  const counts=['scraper-log-count','mac-log-count','csv-log-count','details-log-count','scheduler-log-count','single-log-count'];
+  try{
+    const results=await Promise.all(types.map(t=>fetch(`/api/logs/${t}?lines=${n}`).then(r=>r.json()).catch(()=>({lines:[]}))));
+    results.forEach((d,i)=>{
+      const box=document.getElementById(ids[i]);
+      const cnt=document.getElementById(counts[i]);
+      if(box){
+        box.innerHTML=d.lines.length?d.lines.map(colorLine).join(''):'<div style="color:var(--text3);padding:10px;font-size:12px;">No logs found.</div>';
+        if(autoScroll)box.scrollTop=box.scrollHeight;
+      }
+      if(cnt)cnt.innerText=`${d.lines.length} lines`;
+    });
+  }catch(e){}
+}
+function toggleAutoScroll(){autoScroll=!autoScroll;document.getElementById('autoscroll-btn').style.color=autoScroll?'var(--blue)':'var(--text2)';}
+
+/* ─── RUN HISTORY ────────────────── */
+async function loadRuns(){
+  const step=document.getElementById('run-step-filter').value;
+  try{
+    const url='/api/runs?limit=200'+(step?'&step='+step:'');
+    const runs=await(await fetch(url)).json();
+    const statusColor={success:'var(--green)',failed:'var(--red)',running:'var(--blue)'};
+    document.getElementById('runs-body').innerHTML=runs.map(r=>{
+      const sc=statusColor[r.status]||'var(--text2)';
+      const dur=r.duration_s!=null?r.duration_s.toFixed(1)+'s':'—';
+      const started=r.started_at?new Date(r.started_at).toLocaleString():'—';
+      return`<tr>
+        <td style="color:var(--text3);font-size:11px;">${r.id}</td>
+        <td><span class="badge ${r.step==='mac'?'orange':r.step==='csv'?'green':r.step==='details'?'purple':'blue'}">${r.step}</span></td>
+        <td><span style="color:${sc};font-weight:600;font-size:12px;">${r.status}</span></td>
+        <td style="font-size:12px;color:var(--text2);">${started}</td>
+        <td style="font-family:monospace;font-size:12px;">${dur}</td>
+        <td style="text-align:center;">${r.records_processed??'—'}</td>
+        <td style="text-align:center;color:var(--green);">${r.records_created??'—'}</td>
+        <td style="text-align:center;color:var(--blue);">${r.records_updated??'—'}</td>
+        <td style="text-align:center;color:${r.errors_count?'var(--red)':'var(--text3)'};">${r.errors_count??'—'}</td>
+        <td style="font-size:11px;color:var(--text3);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.error_message||r.notes||''}</td>
+      </tr>`;
+    }).join('')||'<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:40px;">No runs recorded yet.</td></tr>';
+  }catch(e){}
+}
+
+/* ─── QUALITY ─────────────────────── */
+async function loadQuality(){
+  try{
+    const d=await(await fetch('/api/quality')).json();
+    const fields=[
+      {k:'mac_coverage',label:'MAC Address',icon:'wifi'},
+      {k:'detail_coverage',label:'Detail Scraped',icon:'file-text'},
+      {k:'name_coverage',label:'Full Name',icon:'user'},
+      {k:'address_coverage',label:'Full Address',icon:'map-pin'},
+      {k:'email_coverage',label:'Email',icon:'mail'},
+      {k:'mobile_coverage',label:'Mobile Number',icon:'phone'},
+    ];
+    document.getElementById('quality-scorecard').innerHTML=fields.map(f=>{
+      const item=d[f.k]||{count:0,pct:0};
+      const pct=item.pct||0;
+      const color=pct>=80?'var(--green)':pct>=50?'var(--orange)':'var(--red)';
+      return`<div class="quality-item">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <i data-lucide="${f.icon}" style="width:14px;height:14px;color:var(--text3)"></i>
+          <div>
+            <div class="quality-label">${f.label}</div>
+            <div style="font-size:11px;color:var(--text3);">${item.count.toLocaleString()} of ${d.total.toLocaleString()}</div>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div class="quality-pct" style="color:${color};">${pct}%</div>
+          <div class="progress-bar-wrap" style="width:100px;margin-top:4px;"><div class="progress-bar-inner" style="width:${pct}%;background:${color};"></div></div>
+        </div>
+      </div>`;
+    }).join('');
+    safeIcons();
+  }catch(e){}
+}
+
+let activeGapType='mac';
+async function loadGaps(type){
+  activeGapType=type;
+  ['mac','detail','name','address'].forEach(t=>{
+    const btn=document.getElementById('gap-btn-'+t);
+    if(btn)btn.className='btn '+(t===type?'btn-primary':'btn-ghost');
+  });
+  try{
+    const d=await(await fetch('/api/gaps?gap_type='+type+'&limit=100')).json();
+    document.getElementById('gap-count').innerText=`${d.total_gaps.toLocaleString()} customers missing ${type}`;
+    document.getElementById('gap-list').innerHTML=d.items.map(c=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:8px;cursor:pointer;transition:.15s;"
+           onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''"
+           onclick="openProfile('${esc(c.username)}')">
+        <div>
+          <div style="font-size:13px;font-weight:500;color:var(--blue);">${esc(c.username)}</div>
+          <div style="font-size:11px;color:var(--text3);">${esc(c.full_name||'—')} · ${esc(c.plan_name||'—')}</div>
+        </div>
+        <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="event.stopPropagation();triggerSingle('${esc(c.username)}')">Refresh</button>
+      </div>`).join('')||'<div style="color:var(--text3);text-align:center;padding:20px;">No gaps — great coverage!</div>';
+  }catch(e){}
+}
+
+/* ─── SCHEDULER ─────────────────── */
+async function loadScheduler(){
+  try{
+    const d=await(await fetch('/api/scheduler/status')).json();
+    const icon=document.getElementById('sched-status-icon');
+    const txt=document.getElementById('sched-status-text');
+    const hb=document.getElementById('sched-heartbeat');
+    const badge=document.getElementById('sched-status-badge');
+    if(d.scheduler_running&&!d.heartbeat_stale){
+      icon.style.background='rgba(34,197,94,.1)';icon.innerHTML='<i data-lucide="clock" style="width:20px;height:20px;color:var(--green)"></i>';
+      txt.innerText='Scheduler Running';
+      badge.innerHTML='<span class="badge green">Live</span>';
+    }else if(d.scheduler_running&&d.heartbeat_stale){
+      icon.style.background='rgba(245,158,11,.1)';icon.innerHTML='<i data-lucide="clock" style="width:20px;height:20px;color:var(--orange)"></i>';
+      txt.innerText='Scheduler Running (Heartbeat Stale)';
+      badge.innerHTML='<span class="badge orange">Stale</span>';
+    }else{
+      icon.style.background='rgba(239,68,68,.1)';icon.innerHTML='<i data-lucide="clock" style="width:20px;height:20px;color:var(--red)"></i>';
+      txt.innerText='Scheduler Not Running';
+      badge.innerHTML='<span class="badge red">Offline</span>';
+    }
+    if(d.heartbeat&&d.heartbeat.ts){
+      const age=Math.round((Date.now()-new Date(d.heartbeat.ts))/1000);
+      hb.innerText=`Heartbeat: ${d.heartbeat.status||'unknown'} · ${age}s ago${d.heartbeat.message?' · '+d.heartbeat.message:''}`;
+    }else{
+      hb.innerText='Run: python scheduler.py in a separate terminal to start.';
+    }
+    const cols={green:'34,197,94',orange:'245,158,11',purple:'168,85,247',blue:'59,130,246'};
+    const jobs=[
+      {id:'csv_sync',icon:'download-cloud',color:'green',name:'Daily CSV Sync',desc:'Downloads subscriber CSV',schedule:`Daily at ${d.csv_hour||2}:00`},
+      {id:'details_scrape',icon:'file-text',color:'purple',name:'Daily Details Scrape',desc:'Names & addresses',schedule:`Daily at ${d.details_hour||3}:00`},
+      {id:'mac_scrape',icon:'search',color:'orange',name:'MAC Address Scrape',desc:'100 per run, stealth mode',schedule:`Every ${d.mac_interval_hours||2} hour(s)`},
+    ];
+    document.getElementById('jobs-list').innerHTML=jobs.map(j=>`
+      <div class="job-card">
+        <div class="job-icon" style="background:rgba(${cols[j.color]},.12);"><i data-lucide="${j.icon}" style="width:20px;height:20px;color:var(--${j.color})"></i></div>
+        <div style="flex:1;"><div style="font-weight:600;font-size:14px;">${j.name}</div><div style="color:var(--text2);font-size:12px;margin-top:3px;">${j.desc}</div></div>
+        <div style="text-align:right;"><div style="font-size:11px;color:var(--text3);">Schedule</div><div style="font-weight:600;font-size:13px;">${j.schedule}</div></div>
+      </div>`).join('');
+    safeIcons();
+  }catch(e){}
+}
+
+/* ─── CONFIG ─────────────────────── */
+async function loadConfig(){
+  try{
+    const d=await(await fetch('/api/config')).json();
+    document.getElementById('cfg-active').value=d.active_account||'';
+    document.getElementById('cfg-batch').value=d.mac_batch_size||100;
+    document.getElementById('cfg-scheduler').value=d.scheduler_enabled?'true':'false';
+    // Delay sliders
+    const dmin=d.mac_delay_min||20;const dmax=d.mac_delay_max||35;
+    document.getElementById('cfg-delay-min').value=dmin;document.getElementById('delay-min-label').innerText=dmin+'s';
+    document.getElementById('cfg-delay-max').value=dmax;document.getElementById('delay-max-label').innerText=dmax+'s';
+    // Schedule
+    document.getElementById('cfg-csv-hour').value=d.csv_hour||2;
+    document.getElementById('cfg-details-hour').value=d.details_hour||3;
+    document.getElementById('cfg-mac-interval').value=d.mac_interval_hours||2;
+    // Accounts
+    const al=document.getElementById('accounts-list');al.innerHTML='';
+    (d.accounts||[]).forEach(a=>addAccountRow(a.username,a.password||''));
+  }catch(e){}
+}
+function addAccount(){addAccountRow('','');}
+function addAccountRow(u,p){
+  const al=document.getElementById('accounts-list');
+  const div=document.createElement('div');
+  div.style.cssText='display:flex;gap:8px;margin-bottom:8px;';
+  div.innerHTML=`<input type="text" class="acc-u" placeholder="Username" value="${esc(u)}" style="flex:1;"><input type="password" class="acc-p" placeholder="Password" value="${esc(p)}" style="flex:1;"><button class="btn btn-ghost" style="padding:8px 10px;color:var(--red);" onclick="this.parentElement.remove()"><i data-lucide="trash-2" style="width:13px;height:13px;"></i></button>`;
+  al.appendChild(div);safeIcons();
+}
+async function saveConfig(){
+  const accounts=[...document.querySelectorAll('#accounts-list>div')].map(r=>({username:r.querySelector('.acc-u').value.trim(),password:r.querySelector('.acc-p').value.trim()})).filter(a=>a.username);
+  const apiKey=document.getElementById('cfg-api-key').value.trim();
+  const body={
+    active_account:document.getElementById('cfg-active').value.trim(),
+    mac_batch_size:parseInt(document.getElementById('cfg-batch').value),
+    scheduler_enabled:document.getElementById('cfg-scheduler').value==='true',
+    accounts,
+    mac_delay_min:parseFloat(document.getElementById('cfg-delay-min').value),
+    mac_delay_max:parseFloat(document.getElementById('cfg-delay-max').value),
+    csv_hour:parseInt(document.getElementById('cfg-csv-hour').value),
+    details_hour:parseInt(document.getElementById('cfg-details-hour').value),
+    mac_interval_hours:parseInt(document.getElementById('cfg-mac-interval').value),
+  };
+  if(apiKey)body.anthropic_api_key=apiKey;
+  try{
+    const r=await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    toast(d.message||'Saved!',r.ok?'var(--green)':'var(--red)');
+  }catch(e){toast('Save failed','var(--red)');}
+}
+
+/* ─── ACTIONS ─────────────────────── */
+async function trigger(action){
+  try{
+    const r=await fetch('/api/action/'+action,{method:'POST'});
+    const d=await r.json();
+    toast(d.message||'Started!',r.ok?'var(--blue)':'var(--red)');
+    setTimeout(checkStatus,1500);
+  }catch(e){toast('Failed to trigger','var(--red)');}
+}
+async function triggerSingle(username){
+  try{
+    const r=await fetch('/api/action/scrape-single/'+encodeURIComponent(username),{method:'POST'});
+    const d=await r.json();
+    toast(d.message||'Started',r.ok?'var(--blue)':'var(--red)');
+    setTimeout(checkStatus,1500);
+  }catch(e){toast('Failed','var(--red)');}
+}
+
+/* ─── PROFILE PANEL ───────────────── */
+async function openProfile(username){
+  document.getElementById('pp-username').innerText=username;
+  document.getElementById('profile-panel').classList.add('open');
+  document.getElementById('pp-details').innerHTML='<div style="color:var(--text3);text-align:center;padding:20px;">Loading…</div>';
+  document.getElementById('pp-timeline').innerHTML='';
+  try{
+    const [pr,ar]=await Promise.all([fetch(`/api/customers/${encodeURIComponent(username)}`),fetch(`/api/customers/${encodeURIComponent(username)}/audit`)]);
+    const p=await pr.json();const logs=await ar.json();
+    const kv=(k,v,full=false)=>`<div class="kv-pair${full?' full':''}"><div class="kv-k">${k}</div><div class="kv-v">${v||'—'}</div></div>`;
+    document.getElementById('pp-details').innerHTML=`
+      <div class="profile-grid">
+        ${kv('Full Name',esc(p.full_name))}${kv('Status',`<span class="badge ${p.account_status==='Active'?'green':'red'}">${p.account_status}</span>`)}
+        ${kv('Phone',esc(p.mobile_number))}${kv('Email',esc(p.email))}
+        ${kv('Plan',esc(p.plan_name))}${kv('Balance',`<span style="${p.account_balance>0?'color:var(--red)':''}">₹${p.account_balance||0}</span>`)}
+        ${kv('MAC Address',p.mac_address?`<span style="font-family:monospace;color:var(--orange)">${p.mac_address}</span>`:'<span style="color:var(--red)">MISSING</span>',true)}
+        ${kv('Framed IP',esc(p.framed_ip))}${kv('Data Used',p.monthly_data_used_mb?p.monthly_data_used_mb+' MB':'—')}
+        ${kv('Railwire Status',`<span class="badge ${p.railwire_status==='not_found'?'red':'green'}">${p.railwire_status||'active'}</span>`)}
+        ${kv('Last Synced',p.last_synced_at?new Date(p.last_synced_at).toLocaleString():'—')}
+        ${kv('Address',esc(p.full_address),true)}
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;margin-bottom:16px;" onclick="triggerSingle('${esc(username)}')">
+        <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Refresh Data
+      </button>`;
+    safeIcons();
+    document.getElementById('pp-timeline').innerHTML=logs.length?logs.map(l=>`
+      <div class="timeline-item">
+        <div class="tl-dot" style="background:rgba(${l.action==='CREATE'?'34,197,94':'59,130,246'},.15);border:2px solid ${l.action==='CREATE'?'var(--green)':'var(--blue)'};">
+          <div style="width:7px;height:7px;border-radius:50%;background:${l.action==='CREATE'?'var(--green)':'var(--blue)'};"></div>
+        </div>
+        <div class="tl-body">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <span class="badge ${l.action==='CREATE'?'green':'blue'}">${l.action}</span>
+            <span style="font-size:11px;color:var(--text3);">${new Date(l.changed_at).toLocaleString()}</span>
+          </div>
+          ${l.field_name?`<div style="font-size:12px;margin-bottom:8px;">Field: <strong style="color:var(--orange);font-family:monospace;">${esc(l.field_name)}</strong></div>`:''}
+          ${l.old_value?`<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:6px 10px;font-size:12px;margin-bottom:4px;color:var(--red);">— ${esc(l.old_value)}</div>`:''}
+          ${l.new_value?`<div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:6px;padding:6px 10px;font-size:12px;color:var(--green);">+ ${esc(l.new_value)}</div>`:''}
+          ${l.changed_by?`<div style="margin-top:8px;font-size:11px;color:var(--text3);">by ${esc(l.changed_by)}</div>`:''}
+        </div>
+      </div>`).join(''):'<div style="color:var(--text3);text-align:center;padding:20px;">No audit events.</div>';
+  }catch(e){document.getElementById('pp-details').innerHTML='<div style="color:var(--red);padding:20px;">Error loading profile.</div>';}
+}
+function closePanel(){document.getElementById('profile-panel').classList.remove('open');}
+
+/* ─── Boot ─────────────────────── */
+window.addEventListener('load',function(){
+  safeIcons();
+  refreshAll();
+  setInterval(checkStatus,8000);
+  setInterval(loadHealth,15000);
+});
+</script>
+</body>
+</html>

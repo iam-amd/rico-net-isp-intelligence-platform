@@ -1,0 +1,27 @@
+# OLT Proxy Requirements
+
+# Web framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+
+# Telnet (Phase 2a)
+# Python 3.10+ has telnetlib built-in, but we add telnetlib3 for better control
+telnetlib3==1.0.4
+
+# SNMP (Phase 2b — install when ready)
+pysnmp==4.4.12
+
+# HTTP client for backend communication
+httpx==0.26.0
+
+# Environment variables
+python-dotenv==1.0.1
+
+# Logging and debugging
+colorlog==6.8.0
+
+# HTTP-based OLT web portal client (web_client.py)
+requests==2.31.0
+beautifulsoup4==4.12.3
+Pillow==10.3.0
+pytesseract==0.3.13

@@ -1,0 +1,20 @@
+[Unit]
+Description=Rico Net OLT Collector
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/rico-net/olt-proxy
+EnvironmentFile=/home/pi/rico-net/olt-proxy/.env
+ExecStart=/usr/bin/python3 /home/pi/rico-net/olt-proxy/olt_poller.py
+Restart=always
+RestartSec=15
+User=pi
+Group=pi
+
+# Keep local buffering and logs writable by the pi user.
+ReadWritePaths=/home/pi/rico-net
+
+[Install]
+WantedBy=multi-user.target

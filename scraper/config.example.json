@@ -1,0 +1,8 @@
+{
+  "portal_url": "https://example-isp-portal.invalid",
+  "username": "demo-user",
+  "password": "demo-password",
+  "headless": true,
+  "demo_mode": true
+}
+
