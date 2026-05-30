@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import logging
+import os
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -21,12 +22,160 @@ logger = logging.getLogger("rico_net.pipeline")
 router = APIRouter(prefix="/pipeline", tags=["Pipeline Monitor"])
 
 
+def _public_demo_enabled() -> bool:
+    return os.getenv("DEMO_PUBLIC", "").lower() in {"1", "true", "yes", "on"}
+
+
+def _demo_counts(db: Session) -> dict:
+    total = db.execute(text("SELECT COUNT(*) FROM customers")).scalar() or 0
+    with_mac = db.execute(text("SELECT COUNT(*) FROM customers WHERE mac_address IS NOT NULL AND mac_address != ''")).scalar() or 0
+    linked = db.execute(text("SELECT COUNT(*) FROM onu_latest")).scalar() or 0
+    return {"total": int(total), "with_mac": int(with_mac), "linked": int(linked)}
+
+
+def _demo_health(db: Session) -> dict:
+    counts = _demo_counts(db)
+    now = db.execute(text("SELECT NOW()")).scalar()
+    generated_at = now.isoformat() if hasattr(now, "isoformat") else None
+    return {
+        "generated_at": generated_at,
+        "overall_status": "green",
+        "stages": [
+            {
+                "key": "demo_ingest",
+                "name": "Railwire Ingest (Synthetic Demo)",
+                "category": "ingest",
+                "status": "green",
+                "last_success_at": generated_at,
+                "age_seconds": 0,
+                "slo": {"warn_after_sec": 108000, "critical_after_sec": 172800},
+                "details": {"records": counts["total"], "mode": "synthetic"},
+                "operator_hint": "Public demo uses synthetic customer data.",
+            },
+            {
+                "key": "demo_binding",
+                "name": "OLT Binding Reconcile (Synthetic Demo)",
+                "category": "binding",
+                "status": "green",
+                "last_success_at": generated_at,
+                "age_seconds": 0,
+                "slo": {"warn_after_sec": 1800, "critical_after_sec": 5400},
+                "details": {"linked_customers": counts["linked"], "mode": "synthetic"},
+                "operator_hint": "Live hardware collectors are disabled in the public demo.",
+            },
+        ],
+        "workers": [],
+        "coverage": {
+            "total": counts["total"],
+            "with_mac": counts["with_mac"],
+            "with_binding": counts["linked"],
+            "draft": 0,
+        },
+        "truth_summary": {
+            "verdict": "usable",
+            "next_action": "Review the synthetic NOC alarms, ONU inventory, and customer workflows.",
+            "connected_olts": 3,
+            "expected_olts": 3,
+            "active_customers": counts["total"],
+            "active_with_mac": counts["with_mac"],
+            "linked_customers": counts["linked"],
+            "match_rate_pct": round((counts["linked"] / counts["total"]) * 100, 1) if counts["total"] else 0,
+            "live_pon_matches": counts["linked"],
+            "held_from_history": 0,
+            "verified_links": counts["linked"],
+            "probable_links": 0,
+            "missing_olt_likely": 0,
+            "unknown_unbound": 0,
+            "no_mac_in_portal": max(counts["total"] - counts["with_mac"], 0),
+            "critical_alerts": 0,
+            "duplicate_mac_alerts": 0,
+            "profile_incomplete_alerts": 0,
+            "orphan_onus_24h": 0,
+            "orphan_onus_by_olt": [],
+            "total_customers": counts["total"],
+        },
+        "per_account": [{
+            "account": "demo",
+            "total": counts["total"],
+            "with_mac": counts["with_mac"],
+            "with_binding": counts["linked"],
+            "draft": 0,
+            "missing_mac": max(counts["total"] - counts["with_mac"], 0),
+            "missing_binding": max(counts["total"] - counts["linked"], 0),
+        }],
+        "gaps": {
+            "missing_mac": max(counts["total"] - counts["with_mac"], 0),
+            "missing_binding": max(counts["total"] - counts["linked"], 0),
+            "draft": 0,
+        },
+        "state_breakdown": {
+            "overall": {"complete": counts["linked"], "no_mac_in_portal": max(counts["total"] - counts["with_mac"], 0)},
+            "per_account": [{"account": "demo", "state": "complete", "cnt": counts["linked"]}],
+            "states_order": ["complete", "no_mac_in_portal"],
+        },
+    }
+
+
+def _demo_customers(db: Session, limit: int, offset: int) -> dict:
+    rows = db.execute(text("""
+        SELECT c.username, c.first_name, c.last_name, c.phone, c.email, c.plan_name,
+               c.expiry_date, c.balance, c.status, c.connection_status,
+               c.last_seen_online, c.mac_address, c.railwire_admin,
+               o.olt_host, o.pon_port, o.onu_index, o.status AS onu_status,
+               o.polled_at, o.rx_power_dbm
+        FROM customers c
+        LEFT JOIN onu_latest o ON lower(o.mac_address) = lower(c.mac_address)
+        ORDER BY c.username
+        LIMIT :limit OFFSET :offset
+    """), {"limit": limit, "offset": offset}).mappings().all()
+    total = db.execute(text("SELECT COUNT(*) FROM customers")).scalar() or 0
+    customers = []
+    for row in rows:
+        item = dict(row)
+        item["link_status"] = "linked" if item.get("olt_host") else "unlinked"
+        item["binding_source"] = "synthetic_demo" if item.get("olt_host") else None
+        item["confidence"] = "verified" if item.get("olt_host") else None
+        item["data_pipeline_status"] = "complete" if item.get("olt_host") else "missing_binding"
+        item["last_diagnosis"] = None
+        customers.append(item)
+    return {
+        "total": int(total),
+        "limit": limit,
+        "offset": offset,
+        "filters": {"account": None, "q": None, "has_mac": None, "link_status": None},
+        "accounts": [{"account": "demo", "cnt": int(total)}],
+        "customers": customers,
+    }
+
+
+def _demo_completeness(db: Session) -> dict:
+    counts = _demo_counts(db)
+    pct = round((counts["linked"] / counts["total"]) * 100, 1) if counts["total"] else 0
+    fields = {
+        "mac_address": {"filled": counts["with_mac"], "pct": round((counts["with_mac"] / counts["total"]) * 100, 1) if counts["total"] else 0},
+        "olt_host": {"filled": counts["linked"], "pct": pct},
+        "pon_port": {"filled": counts["linked"], "pct": pct},
+        "onu_index": {"filled": counts["linked"], "pct": pct},
+        "ont_serial_number": {"filled": counts["linked"], "pct": pct},
+        "ont_model": {"filled": counts["linked"], "pct": pct},
+        "router_mac_address": {"filled": 0, "pct": 0},
+    }
+    return {"total_linked": counts["linked"], "completeness_pct": pct, "fields": fields}
+
+
 @router.get("/health")
 def get_pipeline_health(
     db: Session = Depends(database.get_db),
     _user=Depends(require_admin),
 ):
-    return pipeline_service.get_pipeline_health(db)
+    try:
+        return pipeline_service.get_pipeline_health(db)
+    except Exception:
+        if not _public_demo_enabled():
+            raise
+        db.rollback()
+        logger.exception("pipeline health fell back to public demo response")
+        return _demo_health(db)
 
 
 @router.get("/gaps/{gap_type}")
@@ -37,7 +186,14 @@ def get_pipeline_gaps(
     db: Session = Depends(database.get_db),
     _user=Depends(require_admin),
 ):
-    result = pipeline_service.get_gap_customers(db, gap_type, limit=limit, offset=offset)
+    try:
+        result = pipeline_service.get_gap_customers(db, gap_type, limit=limit, offset=offset)
+    except Exception:
+        if not _public_demo_enabled():
+            raise
+        db.rollback()
+        logger.exception("pipeline gaps fell back to public demo response")
+        result = {"customers": [], "total": 0, "limit": limit, "offset": offset, "gap_type": gap_type}
     if "error" in result:
         raise HTTPException(status_code=400, detail=result)
     return result
@@ -205,7 +361,20 @@ def get_pipeline_activity(
     _user=Depends(require_admin),
 ):
     """Merged timeline: user-clicked actions + scheduler scraper runs."""
-    return pipeline_service.list_activity(db, account=account, limit=limit)
+    try:
+        return pipeline_service.list_activity(db, account=account, limit=limit)
+    except Exception:
+        if not _public_demo_enabled():
+            raise
+        db.rollback()
+        logger.exception("pipeline activity fell back to public demo response")
+        return {
+            "limit": limit,
+            "count": 0,
+            "filters": {"account": account},
+            "accounts": [{"account": "demo", "cnt": 0}],
+            "items": [],
+        }
 
 
 @router.get("/customers")
@@ -221,12 +390,19 @@ def get_pipeline_customers(
     _user=Depends(require_admin),
 ):
     """Per-account customer list with binding + ONU status. Used by the /pipeline page table."""
-    return pipeline_service.list_customers(
-        db,
-        account=account, q=q, has_mac=has_mac, link_status=link_status,
-        pipeline_state=pipeline_state,
-        limit=limit, offset=offset,
-    )
+    try:
+        return pipeline_service.list_customers(
+            db,
+            account=account, q=q, has_mac=has_mac, link_status=link_status,
+            pipeline_state=pipeline_state,
+            limit=limit, offset=offset,
+        )
+    except Exception:
+        if not _public_demo_enabled():
+            raise
+        db.rollback()
+        logger.exception("pipeline customers fell back to public demo response")
+        return _demo_customers(db, limit=limit, offset=offset)
 
 
 # ─── Binding-alert inbox + actions ─────────────────────────────────────────
@@ -241,9 +417,16 @@ def get_alerts(
     _user=Depends(require_admin),
 ):
     """Binding-drift inbox. Used by the /pipeline Alerts tab."""
-    return pipeline_service.list_binding_alerts(
-        db, status=status, category=category, severity=severity, limit=limit,
-    )
+    try:
+        return pipeline_service.list_binding_alerts(
+            db, status=status, category=category, severity=severity, limit=limit,
+        )
+    except Exception:
+        if not _public_demo_enabled():
+            raise
+        db.rollback()
+        logger.exception("pipeline alerts fell back to public demo response")
+        return {"count": 0, "alerts": []}
 
 
 @router.get("/alerts/stats")
@@ -251,7 +434,14 @@ def get_alert_stats(
     db: Session = Depends(database.get_db),
     _user=Depends(require_admin),
 ):
-    return pipeline_service.binding_alert_stats(db)
+    try:
+        return pipeline_service.binding_alert_stats(db)
+    except Exception:
+        if not _public_demo_enabled():
+            raise
+        db.rollback()
+        logger.exception("pipeline alert stats fell back to public demo response")
+        return {"open": 0, "critical": 0, "warning": 0, "info": 0}
 
 
 class AlertAction(BaseModel):
@@ -315,12 +505,19 @@ def get_activity_events(
     _user=Depends(require_admin),
 ):
     """The unified activity feed. Powers the /pipeline Activity tab."""
-    return pipeline_service.list_activity_events(
-        db,
-        category=category, category_prefix=category_prefix,
-        customer_username=customer_username, severity=severity,
-        since_minutes=since_minutes, limit=limit,
-    )
+    try:
+        return pipeline_service.list_activity_events(
+            db,
+            category=category, category_prefix=category_prefix,
+            customer_username=customer_username, severity=severity,
+            since_minutes=since_minutes, limit=limit,
+        )
+    except Exception:
+        if not _public_demo_enabled():
+            raise
+        db.rollback()
+        logger.exception("pipeline events fell back to public demo response")
+        return {"count": 0, "events": []}
 
 
 @router.get("/events/categories")
@@ -329,7 +526,14 @@ def get_activity_categories(
     _user=Depends(require_admin),
 ):
     """List of distinct categories with counts (for the filter dropdown)."""
-    return pipeline_service.activity_categories(db)
+    try:
+        return pipeline_service.activity_categories(db)
+    except Exception:
+        if not _public_demo_enabled():
+            raise
+        db.rollback()
+        logger.exception("pipeline event categories fell back to public demo response")
+        return {"categories": []}
 
 
 # ─── Profile completeness (pipeline's main job: is identity data complete?) ─
@@ -341,7 +545,14 @@ def get_completeness(
 ):
     """For each identity field, what % of linked customers have it populated?
     Pipeline's North Star metric."""
-    return pipeline_service.get_profile_completeness(db)
+    try:
+        return pipeline_service.get_profile_completeness(db)
+    except Exception:
+        if not _public_demo_enabled():
+            raise
+        db.rollback()
+        logger.exception("pipeline completeness fell back to public demo response")
+        return _demo_completeness(db)
 
 
 @router.post("/enrich")

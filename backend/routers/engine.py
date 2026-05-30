@@ -10,6 +10,7 @@ Endpoints:
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -24,6 +25,42 @@ from services import olt_registry
 logger = logging.getLogger("rico_net.engine_router")
 
 router = APIRouter(prefix="/engine", tags=["OLT Engine"])
+
+
+def _public_demo_enabled() -> bool:
+    return os.getenv("DEMO_PUBLIC", "").lower() in {"1", "true", "yes", "on"}
+
+
+def _engine_demo_status(db: Session) -> Dict[str, Any]:
+    total = db.execute(text("SELECT COUNT(*) FROM customers")).scalar() or 0
+    linked = db.execute(text("SELECT COUNT(*) FROM onu_latest")).scalar() or 0
+    online = db.execute(text("SELECT COUNT(*) FROM onu_latest WHERE lower(status) = 'online'")).scalar() or 0
+    dying = db.execute(text("SELECT COUNT(*) FROM onu_latest WHERE dying_gasp = TRUE")).scalar() or 0
+    return {
+        "total": int(total),
+        "linked": int(linked),
+        "unlinked": max(int(total) - int(linked), 0),
+        "freshly_verified": int(online),
+        "resolved": int(linked),
+        "sticker_scan": 0,
+        "pon_mac_table": int(linked),
+        "stale_pon_mac": max(int(linked) - int(online), 0),
+        "no_olt_match": max(int(total) - int(linked), 0),
+        "verified": int(linked),
+        "probable": 0,
+        "guess": 0,
+        "online_now": int(online),
+        "offline_now": max(int(linked) - int(online), 0),
+        "dying_gasp": int(dying),
+        "last_reconciled_at": None,
+        "by_olt": [],
+        "olts": [],
+        "unmatched_reasons": [
+            {"unmatched_reason": "held_offline", "cnt": max(int(linked) - int(online), 0)},
+            {"unmatched_reason": "not_in_olt_table", "cnt": max(int(total) - int(linked), 0)},
+        ],
+        "demo_note": "Public demo fallback: live OLT reconciliation history is not enabled.",
+    }
 
 
 # ─── Customer DNA ────────────────────────────────────────────────────────────
@@ -107,7 +144,14 @@ def get_engine_status(
     _user=Depends(get_current_user),
 ):
     """For the OLT Engine Monitor page."""
-    return olt_engine.get_status_summary(db)
+    try:
+        return olt_engine.get_status_summary(db)
+    except Exception:
+        if not _public_demo_enabled():
+            raise
+        db.rollback()
+        logger.exception("engine status fell back to public demo response")
+        return _engine_demo_status(db)
 
 
 @router.get("/runs")
@@ -117,7 +161,14 @@ def get_engine_runs(
     _user=Depends(get_current_user),
 ):
     """Recent reconcile cycles — for the monitor page run log."""
-    return {"runs": olt_engine.get_recent_runs(db, limit=min(max(1, limit), 200))}
+    try:
+        return {"runs": olt_engine.get_recent_runs(db, limit=min(max(1, limit), 200))}
+    except Exception:
+        if not _public_demo_enabled():
+            raise
+        db.rollback()
+        logger.exception("engine runs fell back to public demo response")
+        return {"runs": []}
 
 
 @router.get("/changes")
@@ -129,10 +180,17 @@ def get_engine_changes(
     _user=Depends(get_current_user),
 ):
     """State change feed — who flipped from resolved/online/etc."""
-    return {"changes": olt_engine.get_recent_changes(
-        db, limit=min(max(1, limit), 500),
-        change_type=change_type, username=username,
-    )}
+    try:
+        return {"changes": olt_engine.get_recent_changes(
+            db, limit=min(max(1, limit), 500),
+            change_type=change_type, username=username,
+        )}
+    except Exception:
+        if not _public_demo_enabled():
+            raise
+        db.rollback()
+        logger.exception("engine changes fell back to public demo response")
+        return {"changes": []}
 
 
 @router.get("/orphans")
@@ -143,7 +201,14 @@ def get_orphan_onus(
     _user=Depends(get_current_user),
 ):
     """ONUs in any OLT PON MAC table without a matching Railwire customer."""
-    return {"orphans": olt_engine.get_orphan_onus(db, olt_host=olt_host, limit=limit)}
+    try:
+        return {"orphans": olt_engine.get_orphan_onus(db, olt_host=olt_host, limit=limit)}
+    except Exception:
+        if not _public_demo_enabled():
+            raise
+        db.rollback()
+        logger.exception("engine orphans fell back to public demo response")
+        return {"orphans": []}
 
 
 @router.get("/unmatched")
@@ -187,10 +252,18 @@ def get_unmatched_customers(
             params["olt"] = olt_host
     sql += " ORDER BY d.olt_host NULLS LAST, c.username LIMIT :n"
     from sqlalchemy import text as _text
-    rows = db.execute(_text(sql), params).mappings().all()
+    try:
+        rows = db.execute(_text(sql), params).mappings().all()
+    except Exception:
+        if not _public_demo_enabled():
+            raise
+        db.rollback()
+        logger.exception("engine unmatched fell back to public demo response")
+        return {"customers": [], "by_olt": []}
 
     # Per-OLT counts (always returned — for sidebar / filter buttons)
-    summary_rows = db.execute(_text(f"""
+    try:
+        summary_rows = db.execute(_text(f"""
         SELECT COALESCE(d.olt_host, '__none__') AS olt_host,
                COUNT(*)                                                AS total,
                COUNT(*) FILTER (WHERE d.binding_source='stale_pon_mac') AS held_offline,
@@ -198,7 +271,9 @@ def get_unmatched_customers(
         FROM customer_dna d
         WHERE d.binding_source IN ({", ".join(sources)})
         GROUP BY 1 ORDER BY 1
-    """)).mappings().all()
+        """)).mappings().all()
+    except Exception:
+        summary_rows = []
 
     return {
         "customers": [dict(r) for r in rows],
