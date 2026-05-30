@@ -22,11 +22,16 @@ const PORT_COORDS: Record<string, [number, number]> = {
   'EPON0/6': [12.811, 80.033],
   'EPON0/7': [12.817, 80.025],
   'EPON0/8': [12.824, 80.026],
+  'GPON0/1': [12.812, 80.048],
+  'GPON0/2': [12.806, 80.042],
+  'GPON0/3': [12.798, 80.034],
+  'GPON0/4': [12.792, 80.026],
 };
 
 function portKey(port: PortStatus): string {
-  const n = port.pon_port.replace('0/', 'EPON0/');
-  return n.startsWith('EPON') ? n : `EPON${n}`;
+  const n = port.pon_port.toUpperCase();
+  if (n.startsWith('EPON') || n.startsWith('GPON')) return n;
+  return `EPON${n.replace(/^0?\//, '0/')}`;
 }
 
 type ViewMode = 'ports' | 'heatmap';
@@ -45,7 +50,7 @@ export default function MapPage() {
   const { focus } = useNocFocus();
   const [ports, setPorts] = useState<PortStatus[]>([]);
   const [heatPoints, setHeatPoints] = useState<HeatmapPoint[]>([]);
-  const [view, setView] = useState<ViewMode>('ports');
+  const [view, setView] = useState<ViewMode>('heatmap');
   const [loading, setLoading] = useState(true);
   const focusedMac = (searchParams.get('mac') || focus?.macAddress || '').toLowerCase();
   const focusedCustomer = (searchParams.get('customer') || focus?.customerUsername || '').toLowerCase();
@@ -116,7 +121,7 @@ export default function MapPage() {
       {/* Stats bar for heatmap mode */}
       {view === 'heatmap' && heatPoints.length > 0 && (
         <div className="flex gap-4 text-xs text-slate-400 bg-slate-800/60 border border-slate-700/50 rounded-lg px-4 py-2 flex-wrap">
-          <span><span className="text-slate-200 font-medium">{heatPoints.length}</span> ONUs plotted</span>
+          <span><span className="text-slate-200 font-medium">{heatPoints.length}</span> customer locations plotted</span>
           <span><span className="text-green-400 font-medium">{heatPoints.filter(p => p.status === 'online').length}</span> online</span>
           <span><span className="text-red-400 font-medium">{heatPoints.filter(p => p.status !== 'online').length}</span> offline</span>
           <span><span className="text-blue-400 font-medium">{heatPoints.filter(p => p.customer_name).length}</span> customer-linked</span>

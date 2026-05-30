@@ -23,12 +23,12 @@ LAST_NAMES = [
     "Devi", "Muthu", "Srinivasan", "Ali", "Nair", "Joseph", "Ganesh",
 ]
 AREAS = [
-    ("Kanchipuram East", 12.8341, 79.7036),
-    ("Kanchipuram West", 12.8324, 79.6988),
-    ("Collectorate Road", 12.8391, 79.7061),
-    ("Pillaiyarpalayam", 12.8365, 79.6948),
-    ("Orikkai", 12.8209, 79.7112),
-    ("Enathur", 12.8482, 79.7167),
+    ("SRM Main Campus", 12.8230, 80.0440),
+    ("Potheri Village", 12.8200, 80.0370),
+    ("Kattankulathur", 12.8100, 80.0500),
+    ("GST Road Corridor", 12.8200, 80.0440),
+    ("Thailavaram", 12.8050, 80.0400),
+    ("Maraimalai Nagar", 12.7930, 80.0250),
 ]
 PLANS = ["75 Mbps Basic", "100 Mbps Unlimited", "150 Mbps Unlimited", "200 Mbps Business"]
 OLTS = [
@@ -55,12 +55,12 @@ SCENARIOS = {
     },
     "critical_signal": {
         "status": "online", "rx": -28.6, "ticket": "Fiber Cut", "alarm": "FIBER_CRITICAL",
-        "fault": "FIBER_CRITICAL", "priority": "Urgent", "health": 24, "fiber_risk": "CRITICAL",
+        "fault": "FIBER_CRITICAL", "priority": "Critical", "health": 24, "fiber_risk": "CRITICAL",
         "action": "Dispatch fiber kit immediately",
     },
     "power_cut": {
         "status": "offline", "rx": None, "ticket": "No Internet", "alarm": "DYING_GASP",
-        "fault": "POWER_CUT", "priority": "Urgent", "health": 42, "fiber_risk": "MEDIUM",
+        "fault": "POWER_CUT", "priority": "Critical", "health": 42, "fiber_risk": "MEDIUM",
         "action": "Call customer, do not dispatch until power is confirmed",
     },
     "onu_offline": {
@@ -141,6 +141,7 @@ def clear_demo(db):
         db.query(models.CustomerPhone).filter(models.CustomerPhone.customer_id.in_(usernames)).delete(synchronize_session=False)
         db.query(models.CollectionAssignment).filter(models.CollectionAssignment.customer_id.in_(usernames)).delete(synchronize_session=False)
         db.query(models.Customer).filter(models.Customer.username.in_(usernames)).delete(synchronize_session=False)
+    db.query(models.PGBuilding).filter(models.PGBuilding.id.like("demo-pg-%")).delete(synchronize_session=False)
     db.commit()
 
 
@@ -156,6 +157,54 @@ def ensure_pole_groups(db):
         groups.append(pg)
     db.flush()
     return groups
+
+
+def ensure_pg_buildings(db, customers_payload):
+    buildings = []
+    for idx, (area, lat, lng) in enumerate(AREAS[:4], start=1):
+        building_id = f"demo-pg-{idx:02d}"
+        building = db.query(models.PGBuilding).filter_by(id=building_id).first()
+        if not building:
+            building = models.PGBuilding(id=building_id)
+            db.add(building)
+        building.name = f"Demo PG {idx} - {area}"
+        building.pg_type = "Mixed"
+        building.address = f"Demo PG building near {area}, Potheri"
+        building.owner_name = f"Demo Owner {idx}"
+        building.owner_mobile = f"9000099{idx:03d}"
+        building.gps_lat = lat + 0.0015
+        building.gps_lng = lng + 0.0012
+        building.created_by = "demo_simulator"
+        buildings.append(building)
+
+    db.flush()
+
+    pg_customers = customers_payload[::10][:len(buildings) * 6]
+    for bidx, building in enumerate(buildings):
+        floor = db.query(models.PGFloor).filter_by(id=f"{building.id}-floor-1").first()
+        if not floor:
+            floor = models.PGFloor(id=f"{building.id}-floor-1", building_id=building.id)
+            db.add(floor)
+        floor.floor_number = 1
+        db.flush()
+
+        for ridx, payload in enumerate(pg_customers[bidx * 6:(bidx + 1) * 6], start=1):
+            room = db.query(models.PGRoom).filter_by(id=f"{building.id}-room-{ridx:02d}").first()
+            if not room:
+                room = models.PGRoom(id=f"{building.id}-room-{ridx:02d}", building_id=building.id, floor_id=floor.id)
+                db.add(room)
+            room.room_number = f"{100 + ridx}"
+            room.status = "occupied"
+            room.connection_type = "fiber"
+            room.device_setup = "onu_router"
+            room.username = payload["username"]
+            room.ont_serial = payload["ont_serial_number"]
+            room.mac_address = payload["mac_address"]
+            room.ont_model = "Netlink Demo ONT"
+            room.wifi_ssid = f"RicoDemo-PG{bidx + 1}-{ridx}"
+            room.collected_at = datetime.now(timezone.utc)
+
+    return buildings
 
 
 def make_customer_payload(i: int):
@@ -238,9 +287,9 @@ def seed_demo(create_tables=False, reset_demo=False, customers=120):
         now = datetime.now(timezone.utc)
         open_ticket_count = 0
         alarm_count = 0
+        payloads = [make_customer_payload(i) for i in range(1, customers + 1)]
 
-        for i in range(1, customers + 1):
-            payload = make_customer_payload(i)
+        for i, payload in enumerate(payloads, start=1):
             scenario = SCENARIOS[payload["scenario"]]
             pg = pole_groups[(i - 1) % len(pole_groups)]
 
@@ -390,6 +439,8 @@ def seed_demo(create_tables=False, reset_demo=False, customers=120):
                 ticket.sub_issue = "Fiber Diagnostics" if "FIBER" in (scenario["fault"] or "") else "Customer Premise"
                 ticket.tags = f"demo,{payload['scenario']},simulator"
 
+        ensure_pg_buildings(db, payloads)
+
         inventory = [
             ("Netlink ONT", "Hardware", 72, "units"),
             ("SC/APC Patch Cord", "Fiber", 220, "pcs"),
@@ -455,4 +506,3 @@ if __name__ == "__main__":
     parser.add_argument("--customers", type=int, default=int(os.getenv("DEMO_CUSTOMER_COUNT", "120")))
     args = parser.parse_args()
     seed_demo(create_tables=args.create_tables, reset_demo=args.reset_demo, customers=max(12, args.customers))
-

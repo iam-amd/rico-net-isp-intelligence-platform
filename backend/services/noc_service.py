@@ -1526,6 +1526,24 @@ def get_heatmap_data(db: Session) -> List[Dict[str, Any]]:
     """
     onus = db.query(models.ONULatest).all()
     cust_index = _load_customer_index(db)
+    pg_location_by_customer = {
+        room.username: {
+            "lat": room.building.gps_lat,
+            "lng": room.building.gps_lng,
+            "building_id": room.building_id,
+            "building_name": room.building.name,
+            "room_number": room.room_number,
+        }
+        for room in db.query(models.PGRoom)
+        .join(models.PGBuilding, models.PGBuilding.id == models.PGRoom.building_id)
+        .filter(
+            models.PGRoom.username.isnot(None),
+            models.PGBuilding.gps_lat.isnot(None),
+            models.PGBuilding.gps_lng.isnot(None),
+        )
+        .all()
+        if room.username
+    }
 
     points = []
     for o in onus:
@@ -1581,7 +1599,7 @@ def get_heatmap_data(db: Session) -> List[Dict[str, Any]]:
 
         # ── Tier 3: PON port cluster (no customer address available) ──
         if lat is None:
-            norm = (o.pon_port or '').replace('EPON', '')
+            norm = (o.pon_port or '').lower().replace('epon', '').replace('gpon', '')
             if not norm.startswith('0/'):
                 norm = '0/' + norm.lstrip('0').lstrip('/')
             cluster = _PORT_CLUSTER_COORDS.get(norm)
