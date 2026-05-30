@@ -1,4 +1,6 @@
 import argparse
+import hashlib
+import math
 import os
 import sys
 from datetime import datetime, timedelta, timezone
@@ -91,6 +93,15 @@ def mac_for(i: int) -> str:
 
 def serial_for(i: int, tech: str) -> str:
     return f"DEMO{tech}{i:05d}"
+
+
+def organic_jitter(seed: str, radius_deg: float = 0.0042):
+    digest = hashlib.sha256(seed.encode("utf-8")).digest()
+    angle_raw = int.from_bytes(digest[:4], "big") / 0xFFFFFFFF
+    radius_raw = int.from_bytes(digest[4:8], "big") / 0xFFFFFFFF
+    angle = angle_raw * math.tau
+    radius = math.sqrt(radius_raw) * radius_deg
+    return math.cos(angle) * radius, math.sin(angle) * radius
 
 
 def upsert_tech(db, username, full_name, role, area, phone):
@@ -215,6 +226,7 @@ def make_customer_payload(i: int):
     pon_port = ports[((i - 1) // len(OLTS)) % len(ports)]
     scenario = SCENARIO_CYCLE[(i - 1) % len(SCENARIO_CYCLE)]
     username = f"RNDEMO{i:04d}"
+    lat_jitter, lng_jitter = organic_jitter(username)
     return {
         "username": username,
         "first_name": first,
@@ -231,8 +243,8 @@ def make_customer_payload(i: int):
         "onu_index": 1 + ((i * 5) % 64),
         "onu_type": tech.lower(),
         "connection_status": SCENARIOS[scenario]["status"],
-        "gps_lat": lat + ((i % 9) * 0.0008),
-        "gps_lng": lng + ((i % 7) * 0.0008),
+        "gps_lat": round(lat + lat_jitter, 7),
+        "gps_lng": round(lng + lng_jitter, 7),
         "ont_serial_number": serial_for(i, tech),
         "scenario": scenario,
     }

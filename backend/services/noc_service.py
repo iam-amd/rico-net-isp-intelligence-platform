@@ -1563,8 +1563,9 @@ def get_heatmap_data(db: Session) -> List[Dict[str, Any]]:
         if c and c.username in pg_location_by_customer:
             pg_meta = pg_location_by_customer[c.username]
             try:
-                lat = float(pg_meta["lat"])
-                lng = float(pg_meta["lng"])
+                room_lat_jitter, room_lng_jitter = _cluster_jitter(o.mac_address, radius_deg=0.00018)
+                lat = float(pg_meta["lat"]) + room_lat_jitter
+                lng = float(pg_meta["lng"]) + room_lng_jitter
                 has_exact = True
                 location_tier = 1
                 location_source = "pg_building"

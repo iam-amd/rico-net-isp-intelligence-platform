@@ -219,10 +219,10 @@ export default function MapPage() {
                 (focusedMac && pt.mac_address.toLowerCase() === focusedMac)
                 || (focusedCustomer && pt.customer_username?.toLowerCase() === focusedCustomer)
               );
-              const radius = (isPg ? 12 : tier === 1 ? 10 : tier === 2 ? 8 : 5) + (isFocused ? 8 : 0);
-              const opacity = tier === 1 ? 0.90 : tier === 2 ? 0.75 : 0.40;
+              const radius = (isPg ? 5.5 : tier === 1 ? 4.5 : tier === 2 ? 4 : 3) + (isFocused ? 4 : 0);
+              const opacity = isFocused ? 0.92 : tier === 1 ? 0.56 : tier === 2 ? 0.48 : 0.30;
               const borderColor = isFocused ? '#38bdf8' : isPg ? '#f97316' : tier === 1 ? color : tier === 2 ? color : '#334155';
-              const borderWeight = isFocused ? 4 : isPg ? 3 : tier === 1 ? 2 : tier === 2 ? 1.5 : 0.5;
+              const borderWeight = isFocused ? 2.5 : isPg ? 1.4 : tier === 1 ? 0.9 : tier === 2 ? 0.8 : 0.4;
 
               return (
                 <CircleMarker
@@ -234,6 +234,7 @@ export default function MapPage() {
                     fillOpacity: opacity,
                     color: borderColor,
                     weight: borderWeight,
+                    opacity: isFocused ? 0.95 : 0.62,
                   }}
                   eventHandlers={{
                     click: () => {
