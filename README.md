@@ -35,7 +35,7 @@ The backend runs on Render free tier, so the first request after inactivity can 
 - Expo React Native field technician app for mobile workflows
 - Railwire scraper service design with public-safe configuration examples
 - OLT proxy/collector design with hardware access disabled by default
-- Demo seed data for customers, ONUs, alarms, tickets, predictions, inventory, and technicians
+- Bulk demo simulator for customers, ONUs, OLT signal states, alarms, complaints, predictions, inventory, and technicians
 
 ## Repository Map
 
@@ -92,14 +92,14 @@ password: demo1234
 
 ## Public Demo Data
 
-Run this whenever you want a clean fake dataset:
+Run this whenever you want a clean fake dataset. By default it creates 120 synthetic ISP customers across three demo OLTs and mixed fault scenarios.
 
 ```bash
 cd backend
-python scripts\seed_demo.py --create-tables --reset-demo
+python scripts\seed_demo.py --create-tables --reset-demo --customers 120
 ```
 
-The seed script only creates synthetic usernames, phone numbers, addresses, MACs, ONT serials, alarms, and tickets. It does not include real subscriber details.
+The seed script only creates synthetic usernames, phone numbers, addresses, MACs, ONT serials, alarms, tickets, signal history, and predictions. It does not include real subscriber details.
 
 ## Deployment Summary
 

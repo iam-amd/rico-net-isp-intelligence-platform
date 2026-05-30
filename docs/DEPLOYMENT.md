@@ -35,7 +35,7 @@ Vercel is excellent for the frontend apps. FastAPI should usually be hosted sepa
 
 ## Backend On Render
 
-This public demo currently uses Render Docker deployment with `backend/Dockerfile`, because it can seed demo data during container startup.
+This public demo currently uses Render Docker deployment with `backend/Dockerfile`, because it can seed the bulk synthetic ISP simulator during container startup.
 
 1. Create a new PostgreSQL database.
 2. Create a new Web Service from this repo.
@@ -69,6 +69,12 @@ cd backend
 set DATABASE_URL=<hosted-postgres-url>
 set SECRET_KEY=<same-secret>
 python scripts\seed_demo.py --create-tables --reset-demo
+```
+
+To control dataset size:
+
+```bash
+python scripts\seed_demo.py --create-tables --reset-demo --customers 120
 ```
 
 ## Admin UI On Vercel
